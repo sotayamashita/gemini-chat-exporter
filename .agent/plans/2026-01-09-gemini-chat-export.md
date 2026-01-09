@@ -15,6 +15,10 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 00:30Z) Added minimal DOM structure cues needed to guide extraction logic.
 - [ ] Implement message extraction in content script and message passing to background/popup.
 - [ ] Implement download flow and popup UI wiring; validate end-to-end export.
+- [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
+- [ ] Research and add Vitest unit test setup with coverage report generation for extraction logic.
+- [ ] Define a maintainable, loosely coupled architecture and reflect it in module boundaries and test strategy.
+- [ ] Define explicit runtime message contracts between content, popup, and background.
 
 ## Surprises & Discoveries
 
@@ -79,6 +83,22 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
   Rationale: User requested images be ignored.
   Date/Author: 2026-01-09 / Codex
 
+- Decision: Add an optional Playwright E2E script that loads the extension in a temporary Chromium profile to validate the popup-driven export flow.
+  Rationale: Manual validation is acceptable but repeatable local automation will reduce regressions and document the required steps for a novice.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Add a Vitest-based unit test harness with coverage reporting for the extraction logic.
+  Rationale: The extraction code is DOM-dependent and fragile; unit tests with coverage provide safety without relying on manual browser testing.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Separate the export feature into a small pure-core module plus thin entrypoint adapters to improve understandability, ease of change, and testability.
+  Rationale: A clear boundary between DOM extraction/serialization and Chrome-specific wiring reduces coupling and enables unit tests without a browser.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Centralize runtime message contracts in a shared type module to keep entrypoints loosely coupled and consistent.
+  Rationale: A single source of truth for message payloads avoids drift and makes refactors safer.
+  Date/Author: 2026-01-09 / Codex
+
 ## Outcomes & Retrospective
 
 No implementation yet. This section will be updated after milestones complete.
@@ -91,11 +111,23 @@ A “content script” is code that runs inside the web page (here, `gemini.goog
 
 The goal is to extract the visible conversation from the Gemini page DOM in the content script, send the structured data to the background/popup via runtime messaging, and trigger a file download containing Markdown.
 
+## Architecture for Maintainability, Loose Coupling, and Testability
+
+The architecture should maximize understandability, ease of change, and testability by separating responsibilities into a small, well-named core and thin adapters. The core of the feature is the extraction and serialization logic, which should be implemented as pure functions that do not depend on Chrome APIs or WXT. These functions should accept DOM nodes or simplified inputs and return plain data structures. Keeping this logic pure and isolated enables deterministic unit tests and makes it easier to adjust to DOM changes without touching extension wiring.
+
+The entrypoints should remain adapters only: the content script should locate the relevant DOM root and pass it into the extraction core; the popup should only coordinate user actions and status display; the background should only perform the download. Runtime message passing should be treated as a stable boundary with explicit request/response types so changes remain localized and easy to reason about. This architecture supports single-responsibility modules, avoids duplication, and keeps method roles narrowly defined, which improves maintainability and reuse across future targets or exporters.
+
+Concretely, introduce a small `src/export/` module tree that contains only the DOM extraction, normalization, and Markdown serialization functions. This tree should not import any Chrome or WXT APIs. All Chrome-specific and UI concerns stay in `entrypoints/`. This enables unit tests to target `src/export/` directly with JSDOM fixtures and gives a stable, reusable core if another export target or UI is added later.
+
 ## Plan of Work
 
 First, confirm the Gemini DOM structure for a single chat in order to define stable selectors for message containers, roles, and message content. This was done with a logged-in Playwright snapshot. Role detection should rely on UI markers rather than class names. In the observed UI (Japanese locale), user messages are grouped with a “プロンプトをコピー” button and a heading element that mirrors the user text. Gemini responses include a “思考プロセスを表示” control and feedback buttons (“良い回答/悪い回答”). Code blocks show a language label (e.g., “Python”), a “コードをコピー” button, and a `code` element containing text nodes. If the DOM varies, prefer aria-labels and text markers over class names.
 
 Next, implement content script extraction in `entrypoints/content.ts`. Define a function that scans the page and returns a structured array of messages, each including role, plain text, an optional timestamp, and a best-effort Markdown serialization of rich content (paragraphs, lists, code blocks, tables). Provide robust guards to avoid exporting empty or irrelevant nodes. The content script should respond to a runtime message such as `export-current-chat` and return the structured data.
+
+Before wiring the entrypoints, create the core module layout under `src/export/` so the extraction logic is isolated. The content script should be responsible only for finding the chat root element, performing auto-scroll, and invoking the core extraction and serialization functions. The popup and background should only depend on the message contracts and not import any core extraction modules.
+
+Define a shared message contract module (for example `src/export/messages.ts` or `src/shared/messages.ts`) that contains all runtime message types used by the content script, popup, and background. Each entrypoint should import these types so the request/response shapes remain consistent.
 
 The extraction algorithm should explicitly distinguish user vs. Gemini messages. The recommended approach is:
 
@@ -202,6 +234,12 @@ Finally, implement the download flow in `entrypoints/background.ts`. When the po
 
 Update: the filename must be the chat ID from the URL path (e.g., URL `https://gemini.google.com/app/735afd264d35c312` -> filename `735afd264d35c312.md`). If no chat ID is present (e.g., `/app` without ID), show an error in the popup and skip download.
 
+After manual validation works, add an optional local Playwright E2E script that loads the extension in Chromium and automates the export flow. This script should launch Chromium with the extension loaded, open a Gemini chat URL, wait for the user to log in if necessary, trigger the popup button, and then verify the downloaded file exists and contains the export header and expected headings. This is not intended for CI, but for local repeatable validation.
+
+Add a Vitest unit test setup focused on the DOM extraction logic. The tests should construct minimal DOM fixtures (using JSDOM or a similar DOM environment provided by Vitest), invoke the extraction function, and assert that roles, markdown output, and timestamps match expected values. Include coverage reporting so the team can see which branches in the extraction logic are exercised. The plan should record the exact commands to run and the expected output summary so a novice can verify success.
+
+For Vitest, document the exact setup: add `vitest`, `@vitest/coverage-v8`, and `jsdom` as dev dependencies; add a `vitest.config.ts` that sets `test.environment` to `jsdom`, enables coverage with provider `v8`, and includes `src/**/*.{ts,tsx}` in coverage to show uncovered files. Add a `test:coverage` script that runs `vitest run --coverage`, and keep a `test` script for `vitest` in watch mode. This ensures coverage is generated using the default V8 provider and works in a browser-like DOM environment. citeturn1view0turn0search8
+
 ## Concrete Steps
 
 1) Inspect Gemini DOM to define selectors and export mapping.
@@ -223,6 +261,15 @@ Update: the filename must be the chat ID from the URL path (e.g., URL `https://g
    - Call `chrome.downloads.download` with a blob or data URL.
 
 6) Validate end-to-end behavior by opening a Gemini chat and exporting to a Markdown file.
+
+7) Add a local Playwright E2E script that loads the extension in Chromium and validates the export flow, including verifying the downloaded file name and header.
+
+8) Research and add Vitest unit test setup with coverage reporting for the extraction logic, including example fixtures and a test command.
+
+9) Implement the Vitest configuration and scripts:
+   - Add dev dependencies: `vitest`, `@vitest/coverage-v8`, and `jsdom`.
+   - Create `vitest.config.ts` with `test.environment = "jsdom"` and `test.coverage.provider = "v8"`, plus `test.coverage.include = ["src/**/*.{ts,tsx}"]`.
+   - Add `test` and `test:coverage` scripts to `package.json` (`vitest` and `vitest run --coverage`).
 
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
@@ -253,6 +300,18 @@ Manual validation steps:
 - Run `pnpm compile` and expect no TypeScript errors.
 - Load the extension in Chrome and open a Gemini chat page.
 - Click the popup export button and verify a file downloads and content matches the page.
+
+Local Playwright E2E validation steps (optional but recommended once manual flow works):
+
+- Install Playwright if needed and ensure Chromium is available.
+- Run the local Playwright script that launches Chromium with the extension, opens a Gemini chat URL, clicks the popup export button, and checks the downloaded file.
+- Expect the download filename to match the chat ID and the file to start with the `gemini-export` metadata comment.
+
+Vitest unit test validation steps:
+
+- Run the Vitest command that executes unit tests and generates a coverage report.
+- Expect a passing test summary and a coverage report directory to be created (or updated) with a human-readable report.
+- Confirm the coverage run uses the V8 provider and includes files under `src/` even if some are not imported by tests. citeturn1view0
 
 ## Idempotence and Recovery
 
@@ -300,6 +359,77 @@ The extraction should treat each user block and each gemini block as individual 
 
 Use only the existing WXT, React, and Chrome extension APIs. No new libraries are required.
 
+For the optional local E2E validation, add Playwright as a dev dependency and create a local script that runs with Node. This script is intended for developer use, not CI.
+
+For unit testing, add Vitest as a dev dependency and configure it to use a DOM environment (JSDOM) for the extraction logic. Configure coverage reporting (for example, v8 coverage with an HTML report) and document where the report is generated.
+
+Create a small, pure-core module for extraction and serialization logic (for example `src/export/` or `src/core/`) and keep it free of Chrome or WXT APIs. The content script should be the only place that touches real DOM discovery and calls into this core. The popup and background scripts should depend only on typed message contracts and should not import extraction code.
+
+If implementation is blocked or unclear, consult the WXT repository via DeepWiki and the Chrome Extensions documentation via Context7 or web search. This should be explicitly used when questions arise about WXT configuration, extension entrypoints, or permissions. Repositories to consult:
+  - WXT: https://github.com/wxt-dev/wxt (via DeepWiki)
+  - Chrome Extensions docs: https://developer.chrome.com/docs/extensions (via Context7 or web search)
+
+Define the core modules and signatures explicitly so their responsibilities are unambiguous. A concrete, minimal set is:
+
+In `src/export/types.ts`, define:
+
+    export type ExportRole = "user" | "gemini" | "system";
+    export type ExportMessage = {
+      role: ExportRole;
+      markdown: string;
+      text: string;
+      timestamp: string | null;
+      order: number;
+    };
+    export type ExportPayload = {
+      chatId: string | null;
+      messages: ExportMessage[];
+    };
+
+In `src/export/markers.ts`, define:
+
+    export const USER_MARKERS = ["プロンプトをコピー"];
+    export const GEMINI_MARKERS = ["思考プロセスを表示", "良い回答", "悪い回答"];
+
+In `src/export/discovery.ts`, define:
+
+    export function findChatRoot(doc: Document): Element | null;
+    export function findMessageBlocks(root: Element): Element[];
+
+In `src/export/extract.ts`, define:
+
+    export type ExtractOptions = { maxCharsPerMessage?: number };
+    export function extractMessages(root: Element, options?: ExtractOptions): ExportMessage[];
+
+In `src/export/serialize.ts`, define:
+
+    export function formatExportMarkdown(payload: ExportPayload, generatedAtIso: string): string;
+
+In `src/export/url.ts`, define:
+
+    export function getChatIdFromUrl(url: string): string | null;
+
+Keep `extractMessages` and `formatExportMarkdown` pure. They should not read global browser state or call Chrome APIs. The content script should pass in `document` or `root` and the generated timestamp string, and it should supply the chat ID extracted from `location.href` using `getChatIdFromUrl`.
+
+For Vitest configuration, add a `vitest.config.ts` in the repository root that sets `test.environment` to `jsdom` so DOM APIs are available to the extraction tests, and enable coverage with provider `v8`. Coverage should be executed via `vitest run --coverage` and should include source files under `src/` so uncovered modules are visible in the report. citeturn1view0turn0search8
+
+Define message contracts in a shared module (for example `src/export/messages.ts`) with explicit request/response payloads. A concrete minimum set is:
+
+    export type ExportCurrentChatRequest = { type: "export-current-chat" };
+    export type ExportCurrentChatResponse = { ok: true; payload: ExportPayload } | { ok: false; error: string };
+
+    export type DownloadExportRequest = {
+      type: "download-export";
+      payload: { filename: string; markdown: string };
+    };
+    export type DownloadExportResponse = { ok: true } | { ok: false; error: string };
+
+    export type ExtensionMessage =
+      | ExportCurrentChatRequest
+      | DownloadExportRequest;
+
+The content script should respond with `ExportCurrentChatResponse`, and the background should respond with `DownloadExportResponse`. The popup should treat any `ok: false` responses as user-facing errors. Keep these types in one place so adding new message types later is low-risk.
+
 In `entrypoints/content.ts`, define a handler with this shape:
 
     type ExportMessage = {
@@ -324,6 +454,8 @@ In `entrypoints/background.ts`, handle:
 
 In `entrypoints/popup/App.tsx`, implement the UI and the message dispatch to the active tab, then forward the result to the background download handler.
 
+Add a new local Playwright script (for example `scripts/e2e-export.ts`) that uses Playwright’s Chromium launch with `--disable-extensions-except` and `--load-extension` to load the built extension. The script should open a Gemini chat page, wait for login if needed, open the extension popup page via `chrome-extension://<extension-id>/popup/index.html`, click the export button, and verify the download in a temporary directory. The script should log a concise success message with the downloaded filename and first line of the file for verification.
+
 ---
 
 Plan change note: Initial plan created on 2026-01-09 to focus on export of the current Gemini chat via popup-triggered Markdown download, with DOM inspection as the first milestone.
@@ -334,3 +466,17 @@ Plan change note: Added explicit auto-scroll retry flow, aligned long-chat handl
     scroll container (observed):
       infinite-scroller.chat-history
       div.chat-history-scroll-container
+
+Plan change note: Added an optional local Playwright E2E script plan to automate extension-loaded Chromium validation of the popup export flow, per request to verify using Playwright.
+
+Plan change note: Added a Vitest unit test and coverage reporting plan to validate extraction logic and document a repeatable local test command.
+
+Plan change note: Added a maintainability-focused architecture section that separates a pure extraction core from entrypoint adapters to improve understandability, changeability, and testability.
+
+Plan change note: Added a concrete core module breakdown and function signatures under `src/export/` to make the architecture actionable for implementation and testing.
+
+Plan change note: Added explicit runtime message contracts and a shared type module to keep entrypoint communication consistent and loosely coupled.
+
+Plan change note: Added concrete Vitest setup details (dev dependencies, config, scripts, and coverage command) to make unit testing with coverage reproducible.
+
+Plan change note: Added guidance to consult WXT via DeepWiki and Chrome Extensions docs via Context7/search when implementation questions arise.
