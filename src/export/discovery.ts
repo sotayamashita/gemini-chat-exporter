@@ -46,7 +46,8 @@ const findHeading = (doc: Document): Element | null => {
   return null;
 };
 
-const hasUserContent = (element: Element) => Boolean(element.querySelector("h2"));
+const hasUserContent = (element: Element) =>
+  Boolean(element.querySelector('h2, [role="heading"][aria-level="2"]'));
 
 const hasGeminiContent = (element: Element) =>
   Boolean(element.querySelector("p, ul, ol, pre, code, table"));

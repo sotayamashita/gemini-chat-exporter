@@ -26,6 +26,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 17:47JST) Added two more extraction unit tests for mixed-block splitting and timestamp detection.
 - [x] (2026-01-09 18:02JST) Included the source chat URL in exported Markdown metadata.
 - [x] (2026-01-09 18:21JST) Confirmed user prompt heading uses role/aria-level instead of h2, causing missing user messages.
+- [x] (2026-01-09 18:22JST) Expand user prompt extraction to support role/aria-level headings and adjust tests.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -513,6 +514,22 @@ Concrete steps executed (2026-01-09 18:21JST):
       (navigated to https://gemini.google.com/app/735afd264d35c312)
       (evaluated marker buttons and heading roles for user prompts)
 
+Concrete steps executed (2026-01-09 18:22JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Expanded user heading detection to role/aria-level:
+      $ cat src/export/discovery.ts
+      (accepts h2 and role=\"heading\" aria-level=\"2\")
+      $ cat src/export/extract.ts
+      (selects heading from h2 or role/aria heading)
+
+  - Updated tests and verified:
+      $ cat src/export/__tests__/extract.test.ts
+      (timestamp test now uses role/aria heading)
+      $ pnpm test -- --run
+      (4 tests passed)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -567,6 +584,8 @@ Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnp
 Validation status (2026-01-09 17:49JST): `pnpm test -- --run` passed (4 tests) after adjusting the mixed-block fixture.
 
 Validation status (2026-01-09 18:00JST): Playwright E2E script commit reverted; E2E validation is pending until reintroduced.
+
+Validation status (2026-01-09 18:22JST): `pnpm test -- --run` passed (4 tests) after adding role/aria heading support.
 
 ## Idempotence and Recovery
 
@@ -765,3 +784,5 @@ Plan change note: Updated AGENTS.md to document Vitest test and coverage command
 Plan change note: Reverted the Playwright E2E script commit per user request and marked the E2E milestone pending again.
 
 Plan change note: Added source chat URL metadata to the exported Markdown.
+
+Plan change note: Updated user prompt extraction to include role/aria headings in addition to h2 tags and adjusted tests.

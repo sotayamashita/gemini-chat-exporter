@@ -307,7 +307,7 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
 };
 
 const serializeUserBlock = (block: Element) => {
-  const heading = block.querySelector("h2");
+  const heading = block.querySelector('h2, [role="heading"][aria-level="2"]');
   const mainText = heading ? stripUiLabels(heading.textContent ?? "") : "";
   const paragraphs = Array.from(block.querySelectorAll("p"))
     .map((p) => stripUiLabels(p.textContent ?? ""))

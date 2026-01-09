@@ -120,7 +120,7 @@ describe("export extraction", () => {
           <h2>Gemini との会話</h2>
           <section class="message user">
             <button>プロンプトをコピー</button>
-            <h2>Hello</h2>
+            <div role="heading" aria-level="2">Hello</div>
             <div aria-label="09:41">meta</div>
           </section>
         </section>
