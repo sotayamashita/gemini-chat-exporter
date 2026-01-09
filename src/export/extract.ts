@@ -1,6 +1,6 @@
 import { GEMINI_MARKERS, UI_LABELS, USER_MARKERS } from "@/src/export/markers";
 import type { ExportMessage, ExportRole } from "@/src/export/types";
-import { findMessageBlocks, getMarkerButtons, splitMixedBlock } from "@/src/export/discovery";
+import { findMessageBlocks, splitMixedBlock } from "@/src/export/discovery";
 
 /**
  * Marker role derived from UI labels.
