@@ -26,7 +26,6 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 - `pnpm compile`: Type-check only (`tsc --noEmit`).
 - `pnpm test`: Run Vitest in watch mode.
 - `pnpm test:coverage`: Run Vitest once with V8 coverage report generation.
-- `pnpm e2e:export`: Run Playwright E2E export flow (requires GEMINI_CHAT_URL and a logged-in Gemini session).
 - `pnpm install`: Triggers `postinstall` → `wxt prepare` to set up WXT.
 
 ## Coding Style & Naming Conventions
@@ -41,7 +40,6 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 - Vitest is configured for unit tests in a JSDOM environment.
 - Use `pnpm test` for watch mode, or `pnpm test:coverage` for a coverage report.
 - Use `pnpm compile` for type-check validation.
-- Playwright E2E export script lives at `scripts/e2e-export.mjs` and expects `GEMINI_CHAT_URL` to point at a chat.
 
 ## Commit & Pull Request Guidelines
 
