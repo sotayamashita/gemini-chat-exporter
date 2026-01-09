@@ -24,6 +24,8 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 - `pnpm zip`: Produce a distributable ZIP package.
 - `pnpm zip:firefox`: ZIP for Firefox.
 - `pnpm compile`: Type-check only (`tsc --noEmit`).
+- `pnpm test`: Run Vitest in watch mode.
+- `pnpm test:coverage`: Run Vitest once with V8 coverage report generation.
 - `pnpm install`: Triggers `postinstall` → `wxt prepare` to set up WXT.
 
 ## Coding Style & Naming Conventions
@@ -35,9 +37,9 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 ## Testing Guidelines
 
-- No automated test framework is configured.
+- Vitest is configured for unit tests in a JSDOM environment.
+- Use `pnpm test` for watch mode, or `pnpm test:coverage` for a coverage report.
 - Use `pnpm compile` for type-check validation.
-- If you add tests, document the framework and commands here.
 
 ## Commit & Pull Request Guidelines
 

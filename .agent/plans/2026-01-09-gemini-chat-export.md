@@ -21,6 +21,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
 - [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
+- [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -443,6 +444,14 @@ Concrete steps executed (2026-01-09 17:27JST - 17:31JST):
       $ git commit -m "test: add vitest coverage for export extraction"
       (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
 
+Concrete steps executed (2026-01-09 17:41JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Documented test commands in AGENTS.md:
+      $ cat AGENTS.md
+      (added pnpm test and pnpm test:coverage entries; updated Testing Guidelines)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -684,3 +693,5 @@ Plan change note: Collapsed debug information behind a details/summary control a
 Plan change note: Added Vitest configuration, scripts, and extraction unit tests with coverage output, and updated progress/validation logs to reflect the new test harness.
 
 Plan change note: Recorded the Vitest setup commit and coverage output ignore step in progress and concrete steps.
+
+Plan change note: Updated AGENTS.md to document Vitest test and coverage commands and reflect the new testing guidelines.
