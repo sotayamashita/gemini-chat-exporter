@@ -17,7 +17,9 @@
     "format:check": "oxfmt --check",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit"
+    "compile": "tsc --noEmit",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "react": "^19.2.3",
@@ -28,12 +30,15 @@
     "@commitlint/config-conventional": "^20.3.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.0.16",
     "@wxt-dev/module-react": "^1.1.5",
     "husky": "^9.1.7",
+    "jsdom": "^27.4.0",
     "lint-staged": "^16.2.7",
     "oxfmt": "^0.23.0",
     "oxlint": "^1.38.0",
     "typescript": "^5.9.3",
+    "vitest": "^4.0.16",
     "wxt": "^0.20.6"
   }
 }

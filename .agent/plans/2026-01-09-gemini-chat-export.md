@@ -10,6 +10,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 ## Progress
 
+- [x] (2026-01-09 17:27JST) Started Vitest unit test + coverage setup milestone.
 - [x] (2026-01-09 00:00Z) Created initial ExecPlan scoped to exporting the current Gemini chat via popup-triggered download.
 - [x] (2026-01-09 00:20Z) Inspected Gemini chat DOM while logged in and captured candidate markers for user vs. Gemini messages and code blocks.
 - [x] (2026-01-09 00:30Z) Added minimal DOM structure cues needed to guide extraction logic.
@@ -18,7 +19,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 10:10JST) Implemented content script extraction, auto-scroll handling, and payload response wiring.
 - [x] (2026-01-09 10:25JST) Implemented popup export UI, background download handler, and WXT manifest permissions.
 - [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
-- [ ] Research and add Vitest unit test setup with coverage report generation for extraction logic.
+- [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -112,6 +113,10 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Decision: Add a Vitest-based unit test harness with coverage reporting for the extraction logic.
   Rationale: The extraction code is DOM-dependent and fragile; unit tests with coverage provide safety without relying on manual browser testing.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Configure Vitest with JSDOM, V8 coverage, and an alias for the repo root so `@/` imports resolve in tests.
+  Rationale: The extraction logic relies on DOM APIs and existing `@/` path aliases; JSDOM enables DOM tests and the alias avoids brittle relative imports.
   Date/Author: 2026-01-09 / Codex
 
 - Decision: Separate the export feature into a small pure-core module plus thin entrypoint adapters to improve understandability, ease of change, and testability.
@@ -404,6 +409,35 @@ Concrete steps executed (2026-01-09 09:10JST - 10:30JST):
       $ git commit -m "feat: export current Gemini chat"
       (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
 
+Concrete steps executed (2026-01-09 17:27JST - 17:31JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Added Vitest/JSDOM dependencies:
+      $ pnpm add -D vitest @vitest/coverage-v8 jsdom
+      (added vitest 4.0.16, @vitest/coverage-v8 4.0.16, jsdom 27.4.0)
+
+  - Added Vitest configuration and extraction tests:
+      $ cat vitest.config.ts
+      (configured JSDOM, V8 coverage, and @ alias)
+      $ cat src/export/__tests__/extract.test.ts
+      (added extraction tests for user + gemini messages)
+
+  - Added test scripts:
+      $ cat package.json
+      (added test and test:coverage scripts)
+
+  - Ran Vitest unit tests and coverage:
+      $ pnpm test -- --run
+      (2 tests passed)
+      $ pnpm test:coverage
+      (coverage report generated; v8 provider)
+
+  - Ignored coverage output and cleaned generated report:
+      $ cat .gitignore
+      (added coverage)
+      $ rm -rf coverage
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -449,6 +483,8 @@ Vitest unit test validation steps:
 Validation status (2026-01-09 10:30JST): No runtime validation executed yet. `pnpm compile`, manual extension export flow, and Playwright/Vitest checks are pending.
 
 Validation status (2026-01-09 16:35JST): `pnpm compile` succeeded (tsc --noEmit).
+
+Validation status (2026-01-09 17:31JST): `pnpm test -- --run` passed (2 tests). `pnpm test:coverage` passed with V8 coverage output and HTML report.
 
 Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnpm build` successfully during commit hook.
 
@@ -639,3 +675,5 @@ Plan change note: Added guard for undefined background download responses to pre
 Plan change note: Added popup-side download fallback using downloads API when background messaging is unavailable, to ensure export still completes.
 
 Plan change note: Collapsed debug information behind a details/summary control and recorded the background-response discovery.
+
+Plan change note: Added Vitest configuration, scripts, and extraction unit tests with coverage output, and updated progress/validation logs to reflect the new test harness.
