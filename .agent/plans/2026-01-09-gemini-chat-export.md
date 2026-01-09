@@ -19,6 +19,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 10:10JST) Implemented content script extraction, auto-scroll handling, and payload response wiring.
 - [x] (2026-01-09 10:25JST) Implemented popup export UI, background download handler, and WXT manifest permissions.
 - [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
+- [x] (2026-01-09 18:00JST) Reverted Playwright E2E script commit per request.
 - [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
 - [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
@@ -123,6 +124,10 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Decision: Configure Vitest with JSDOM, V8 coverage, and an alias for the repo root so `@/` imports resolve in tests.
   Rationale: The extraction logic relies on DOM APIs and existing `@/` path aliases; JSDOM enables DOM tests and the alias avoids brittle relative imports.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Revert the Playwright E2E script commit at the user's request.
+  Rationale: The user requested reverting commit `0b49cc70a8a0d935a9920c010ddb848ed7ff2127`, so the E2E script and related docs/deps were removed.
   Date/Author: 2026-01-09 / Codex
 
 - Decision: Separate the export feature into a small pure-core module plus thin entrypoint adapters to improve understandability, ease of change, and testability.
@@ -472,6 +477,13 @@ Concrete steps executed (2026-01-09 17:47JST - 17:49JST):
       $ pnpm test -- --run
       (4 tests passed)
 
+Concrete steps executed (2026-01-09 18:00JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Reverted the Playwright E2E script commit:
+      $ git revert 0b49cc70a8a0d935a9920c010ddb848ed7ff2127
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -523,6 +535,8 @@ Validation status (2026-01-09 17:31JST): `pnpm test -- --run` passed (2 tests). 
 Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnpm build` successfully during commit hook.
 
 Validation status (2026-01-09 17:49JST): `pnpm test -- --run` passed (4 tests) after adjusting the mixed-block fixture.
+
+Validation status (2026-01-09 18:00JST): Playwright E2E script commit reverted; E2E validation is pending until reintroduced.
 
 ## Idempotence and Recovery
 
@@ -717,3 +731,5 @@ Plan change note: Added Vitest configuration, scripts, and extraction unit tests
 Plan change note: Recorded the Vitest setup commit and coverage output ignore step in progress and concrete steps.
 
 Plan change note: Updated AGENTS.md to document Vitest test and coverage commands and reflect the new testing guidelines.
+
+Plan change note: Reverted the Playwright E2E script commit per user request and marked the E2E milestone pending again.
