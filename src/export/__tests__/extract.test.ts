@@ -82,4 +82,56 @@ describe("export extraction", () => {
     expect(messages[0].markdown).toContain("First response");
     expect(messages[1].markdown).toContain("Second prompt");
   });
+
+  it("splits mixed blocks into user and gemini segments", () => {
+    document.body.innerHTML = `
+      <main>
+        <section class="chat-root">
+          <h2>Gemini との会話</h2>
+          <section class="message mixed">
+            <section class="user">
+              <button>プロンプトをコピー</button>
+              <h2>User prompt</h2>
+            </section>
+            <section class="gemini">
+              <button>思考プロセスを表示</button>
+              <p>Assistant response</p>
+            </section>
+          </section>
+        </section>
+      </main>
+    `;
+
+    const root = findChatRoot(document);
+    expect(root).not.toBeNull();
+
+    const messages = extractMessages(root!);
+    expect(messages).toHaveLength(2);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].markdown).toBe("User prompt");
+    expect(messages[1].role).toBe("gemini");
+    expect(messages[1].markdown).toContain("Assistant response");
+  });
+
+  it("detects timestamp from aria-label when time tag is missing", () => {
+    document.body.innerHTML = `
+      <main>
+        <section class="chat-root">
+          <h2>Gemini との会話</h2>
+          <section class="message user">
+            <button>プロンプトをコピー</button>
+            <h2>Hello</h2>
+            <div aria-label="09:41">meta</div>
+          </section>
+        </section>
+      </main>
+    `;
+
+    const root = findChatRoot(document);
+    expect(root).not.toBeNull();
+
+    const messages = extractMessages(root!);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].timestamp).toBe("09:41");
+  });
 });

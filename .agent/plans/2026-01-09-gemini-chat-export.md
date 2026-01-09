@@ -22,6 +22,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
 - [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
+- [x] (2026-01-09 17:47JST) Added two more extraction unit tests for mixed-block splitting and timestamp detection.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -62,6 +63,9 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Observation: Background service worker did not respond to `download-export`, but popup-side `downloads` fallback succeeded and export completed.
   Evidence: Popup debug panel showed `response: {"ok":true,...}` yet displayed “Background script not available,” followed by successful download after adding popup download fallback (2026-01-09).
+
+- Observation: Mixed-block test failed when user and gemini markers lived in the same container without nested blocks; no messages were extracted.
+  Evidence: `pnpm test -- --run` failed with “expected [] to have a length of 2 but got +0” in `splits mixed blocks into user and gemini segments` (2026-01-09 17:48JST). The fixture was updated to separate user/gemini into nested blocks.
 
 ## Decision Log
 
@@ -452,6 +456,22 @@ Concrete steps executed (2026-01-09 17:41JST):
       $ cat AGENTS.md
       (added pnpm test and pnpm test:coverage entries; updated Testing Guidelines)
 
+Concrete steps executed (2026-01-09 17:47JST - 17:49JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Added mixed-block and timestamp tests:
+      $ cat src/export/__tests__/extract.test.ts
+      (added mixed block split test and aria-label timestamp test)
+
+  - Validated and fixed the mixed-block fixture:
+      $ pnpm test -- --run
+      (1 failure: mixed-block test returned 0 messages)
+      $ cat src/export/__tests__/extract.test.ts
+      (adjusted fixture to nest user/gemini blocks)
+      $ pnpm test -- --run
+      (4 tests passed)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -501,6 +521,8 @@ Validation status (2026-01-09 16:35JST): `pnpm compile` succeeded (tsc --noEmit)
 Validation status (2026-01-09 17:31JST): `pnpm test -- --run` passed (2 tests). `pnpm test:coverage` passed with V8 coverage output and HTML report.
 
 Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnpm build` successfully during commit hook.
+
+Validation status (2026-01-09 17:49JST): `pnpm test -- --run` passed (4 tests) after adjusting the mixed-block fixture.
 
 ## Idempotence and Recovery
 
