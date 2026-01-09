@@ -10,5 +10,6 @@ export type ExportMessage = {
 
 export type ExportPayload = {
   chatId: string | null;
+  sourceUrl: string;
   messages: ExportMessage[];
 };

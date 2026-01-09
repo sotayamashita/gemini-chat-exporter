@@ -95,7 +95,7 @@ const handleExport = async (): Promise<ExportCurrentChatResponse> => {
     return { ok: false, error: "No messages were found in the current chat." };
   }
 
-  return { ok: true, payload: { chatId, messages } };
+  return { ok: true, payload: { chatId, sourceUrl: window.location.href, messages } };
 };
 
 export default defineContentScript({

@@ -24,6 +24,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
 - [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
 - [x] (2026-01-09 17:47JST) Added two more extraction unit tests for mixed-block splitting and timestamp detection.
+- [x] (2026-01-09 18:02JST) Included the source chat URL in exported Markdown metadata.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -128,6 +129,10 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Decision: Revert the Playwright E2E script commit at the user's request.
   Rationale: The user requested reverting commit `0b49cc70a8a0d935a9920c010ddb848ed7ff2127`, so the E2E script and related docs/deps were removed.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Include the source chat URL in the exported Markdown metadata.
+  Rationale: The user requested the download to include the chat URL for traceability.
   Date/Author: 2026-01-09 / Codex
 
 - Decision: Separate the export feature into a small pure-core module plus thin entrypoint adapters to improve understandability, ease of change, and testability.
@@ -484,6 +489,18 @@ Concrete steps executed (2026-01-09 18:00JST):
   - Reverted the Playwright E2E script commit:
       $ git revert 0b49cc70a8a0d935a9920c010ddb848ed7ff2127
 
+Concrete steps executed (2026-01-09 18:02JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Added source URL to export payload and Markdown metadata:
+      $ cat src/export/types.ts
+      (added sourceUrl field to ExportPayload)
+      $ cat entrypoints/content.ts
+      (included window.location.href in payload)
+      $ cat src/export/serialize.ts
+      (added gemini-export source-url metadata line)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -495,6 +512,7 @@ Acceptance is a user-visible behavior. The following must be true:
 - If the popup is opened on a non-Gemini page, it shows an error or guidance instead of exporting.
 - The downloaded filename equals the chat ID plus `.md` (e.g., `735afd264d35c312.md`).
 - The first lines of the Markdown file include an export date metadata comment.
+- The Markdown metadata includes the source chat URL.
 
 Edge and failure flows to validate:
 
@@ -733,3 +751,5 @@ Plan change note: Recorded the Vitest setup commit and coverage output ignore st
 Plan change note: Updated AGENTS.md to document Vitest test and coverage commands and reflect the new testing guidelines.
 
 Plan change note: Reverted the Playwright E2E script commit per user request and marked the E2E milestone pending again.
+
+Plan change note: Added source chat URL metadata to the exported Markdown.

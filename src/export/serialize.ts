@@ -12,7 +12,8 @@ const roleLabel = (role: ExportRole) => {
 
 export function formatExportMarkdown(payload: ExportPayload, generatedAtIso: string): string {
   const lines: string[] = [];
-  lines.push(`<!-- gemini-export: generated-at=${generatedAtIso} -->`, "");
+  lines.push(`<!-- gemini-export: generated-at=${generatedAtIso} -->`);
+  lines.push(`<!-- gemini-export: source-url=${payload.sourceUrl} -->`, "");
 
   for (const message of payload.messages) {
     const label = roleLabel(message.role);
