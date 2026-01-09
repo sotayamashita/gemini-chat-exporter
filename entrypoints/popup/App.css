@@ -58,7 +58,9 @@
   background: linear-gradient(135deg, #1f5c4a 0%, #2a7a5f 60%, #3d8b6f 100%);
   box-shadow: 0 12px 20px rgba(36, 80, 60, 0.25);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .popup__button:hover:enabled {
