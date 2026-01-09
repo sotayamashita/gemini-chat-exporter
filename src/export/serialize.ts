@@ -1,5 +1,8 @@
 import type { ExportPayload, ExportRole } from "@/src/export/types";
 
+/**
+ * Maps an export role to its display label for markdown headings.
+ */
 const roleLabel = (role: ExportRole) => {
   if (role === "user") {
     return "User";
@@ -10,6 +13,13 @@ const roleLabel = (role: ExportRole) => {
   return "System";
 };
 
+/**
+ * Builds a markdown document from the export payload.
+ *
+ * @param payload - The chat export payload to serialize.
+ * @param generatedAtIso - ISO-8601 timestamp to embed in the header.
+ * @returns The markdown representation of the chat.
+ */
 export function formatExportMarkdown(payload: ExportPayload, generatedAtIso: string): string {
   const lines: string[] = [];
   lines.push(`<!-- gemini-export: generated-at=${generatedAtIso} -->`);

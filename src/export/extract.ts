@@ -2,8 +2,14 @@ import { GEMINI_MARKERS, UI_LABELS, USER_MARKERS } from "@/src/export/markers";
 import type { ExportMessage, ExportRole } from "@/src/export/types";
 import { findMessageBlocks, getMarkerButtons, splitMixedBlock } from "@/src/export/discovery";
 
+/**
+ * Marker role derived from UI labels.
+ */
 type MarkerRole = "user" | "gemini";
 
+/**
+ * Describes a parsed block item within a chat segment.
+ */
 type BlockItem =
   | { type: "paragraph"; element: Element }
   | { type: "heading"; element: Element }
@@ -11,11 +17,20 @@ type BlockItem =
   | { type: "code"; element: Element; code: string; lang: string | null }
   | { type: "table"; element: Element; rows: string[][] | null };
 
+/**
+ * Options for message extraction.
+ */
 export type ExtractOptions = { maxCharsPerMessage?: number };
 
+/**
+ * Normalizes text by collapsing whitespace and trimming.
+ */
 const normalizeText = (value: string | null | undefined) =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
+/**
+ * Removes UI labels (copy buttons, ratings) from extracted text.
+ */
 const stripUiLabels = (value: string) => {
   let output = value;
   for (const label of UI_LABELS) {
@@ -24,20 +39,35 @@ const stripUiLabels = (value: string) => {
   return normalizeText(output);
 };
 
+/**
+ * Checks whether the text contains any of the marker strings.
+ */
 const textMatches = (value: string, markers: string[]) =>
   markers.some((marker) => value.includes(marker));
 
+/**
+ * Reads a button's accessible label or visible text.
+ */
 const buttonText = (button: HTMLButtonElement) =>
   normalizeText(button.getAttribute("aria-label") || button.textContent);
 
+/**
+ * Checks if a block contains any of the marker buttons.
+ */
 const blockHasMarkers = (block: Element, markers: string[]) =>
   Array.from(block.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
     textMatches(buttonText(button), markers),
   );
 
+/**
+ * Checks if a block contains markers for a specific role.
+ */
 const hasRoleMarkers = (block: Element, role: MarkerRole) =>
   blockHasMarkers(block, role === "user" ? USER_MARKERS : GEMINI_MARKERS);
 
+/**
+ * Comparator that sorts elements by document order.
+ */
 const compareDocumentOrder = (a: Element, b: Element) => {
   if (a === b) {
     return 0;
@@ -52,6 +82,9 @@ const compareDocumentOrder = (a: Element, b: Element) => {
   return 0;
 };
 
+/**
+ * Attempts to find a timestamp label within a block.
+ */
 const findTimestamp = (block: Element): string | null => {
   const timeElement = block.querySelector("time");
   if (timeElement) {
@@ -72,9 +105,15 @@ const findTimestamp = (block: Element): string | null => {
   return null;
 };
 
+/**
+ * Checks if the element is equal to or within a container.
+ */
 const isWithin = (element: Element, container: Element) =>
   element === container || container.contains(element);
 
+/**
+ * Finds the closest ancestor matching a predicate, bounded by the root.
+ */
 const findClosestAncestor = (
   element: Element,
   predicate: (node: Element) => boolean,
@@ -90,6 +129,9 @@ const findClosestAncestor = (
   return null;
 };
 
+/**
+ * Finds a language label in a code block container.
+ */
 const findLanguageLabel = (container: Element) => {
   const candidates = Array.from(
     container.querySelectorAll<HTMLElement>("span, div, label, button"),
@@ -109,6 +151,9 @@ const findLanguageLabel = (container: Element) => {
   return null;
 };
 
+/**
+ * Collects code blocks (including fenced code) within a block.
+ */
 const collectCodeBlocks = (block: Element) => {
   const codeElements = Array.from(block.querySelectorAll("code"));
   const containers = new Map<Element, { code: string; lang: string | null }>();
@@ -143,12 +188,18 @@ const collectCodeBlocks = (block: Element) => {
   }));
 };
 
+/**
+ * Collects table blocks within a block and parses their rows.
+ */
 const collectTableBlocks = (block: Element) =>
   Array.from(block.querySelectorAll("table")).map((table) => ({
     element: table,
     rows: extractTableRows(table),
   }));
 
+/**
+ * Extracts normalized text rows from a table element.
+ */
 const extractTableRows = (table: Element): string[][] | null => {
   const rows = Array.from(table.querySelectorAll("tr"));
   if (rows.length === 0) {
@@ -174,6 +225,9 @@ const extractTableRows = (table: Element): string[][] | null => {
   return parsed;
 };
 
+/**
+ * Collects ordered items (headings, paragraphs, lists, code, tables) from a block.
+ */
 const collectBlockItems = (block: Element): BlockItem[] => {
   const codeBlocks = collectCodeBlocks(block);
   const tableBlocks = collectTableBlocks(block);
@@ -217,6 +271,9 @@ const collectBlockItems = (block: Element): BlockItem[] => {
   return items;
 };
 
+/**
+ * Serializes a list element into markdown.
+ */
 const serializeList = (list: Element) => {
   const isOrdered = list.tagName.toLowerCase() === "ol";
   const items = Array.from(list.querySelectorAll("li"));
@@ -233,6 +290,9 @@ const serializeList = (list: Element) => {
     .join("\n");
 };
 
+/**
+ * Serializes table rows into a markdown table.
+ */
 const serializeTable = (rows: string[][] | null) => {
   if (!rows || rows.length === 0) {
     return "";
@@ -245,12 +305,18 @@ const serializeTable = (rows: string[][] | null) => {
   return [headerLine, separatorLine, ...bodyLines].join("\n");
 };
 
+/**
+ * Builds a fenced code block with an optional language.
+ */
 const buildCodeBlock = (code: string, lang: string | null) => {
   const language = lang ? lang.trim() : "";
   const fence = "```";
   return `${fence}${language}\n${code.replace(/\n$/, "")}\n${fence}`;
 };
 
+/**
+ * Serializes a Gemini response block into markdown and text.
+ */
 const serializeGeminiBlock = (block: Element, messageIndex: number) => {
   const items = collectBlockItems(block);
   const markdownParts: string[] = [];
@@ -306,6 +372,9 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
   return { markdown, text };
 };
 
+/**
+ * Serializes a user prompt block into markdown/text.
+ */
 const serializeUserBlock = (block: Element) => {
   const heading = block.querySelector('h2, [role="heading"][aria-level="2"]');
   const mainText = heading ? stripUiLabels(heading.textContent ?? "") : "";
@@ -318,9 +387,15 @@ const serializeUserBlock = (block: Element) => {
   return { markdown, text: markdown };
 };
 
+/**
+ * Clamps a string to a maximum length.
+ */
 const clamp = (value: string, maxChars: number) =>
   value.length > maxChars ? value.slice(0, maxChars) : value;
 
+/**
+ * Determines the role for the current block based on markers and history.
+ */
 const determineRole = (block: Element, previousRole: ExportRole | null): ExportRole | null => {
   const hasUser = hasRoleMarkers(block, "user");
   const hasGemini = hasRoleMarkers(block, "gemini");
@@ -340,6 +415,13 @@ const determineRole = (block: Element, previousRole: ExportRole | null): ExportR
   return null;
 };
 
+/**
+ * Extracts chat messages from the DOM root into exportable payload data.
+ *
+ * @param root - Root element containing the chat transcript.
+ * @param options - Extraction options such as per-message size limit.
+ * @returns Ordered list of exported messages.
+ */
 export function extractMessages(root: Element, options: ExtractOptions = {}): ExportMessage[] {
   const maxChars = options.maxCharsPerMessage ?? 200000;
   const blocks = findMessageBlocks(root);

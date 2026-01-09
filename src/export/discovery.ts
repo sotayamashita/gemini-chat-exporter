@@ -1,23 +1,44 @@
 import { GEMINI_MARKERS, USER_MARKERS } from "@/src/export/markers";
 
+/**
+ * Role associated with Gemini or user marker buttons.
+ */
 type MarkerRole = "user" | "gemini";
 
+/**
+ * Marker match result with role and button element.
+ */
 type MarkerMatch = {
   role: MarkerRole;
   element: HTMLButtonElement;
 };
 
+/**
+ * Text markers that identify the conversation heading.
+ */
 const HEADING_MARKERS = ["Gemini との会話", "Conversation with Gemini"];
 
+/**
+ * Normalizes text by collapsing whitespace and trimming.
+ */
 const normalizeText = (value: string | null | undefined) =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
+/**
+ * Checks whether the text contains any of the marker strings.
+ */
 const textMatches = (value: string, markers: string[]) =>
   markers.some((marker) => value.includes(marker));
 
+/**
+ * Reads a button's accessible label or visible text.
+ */
 const buttonText = (button: HTMLButtonElement) =>
   normalizeText(button.getAttribute("aria-label") || button.textContent);
 
+/**
+ * Determines the marker role from button text.
+ */
 const getMarkerRole = (button: HTMLButtonElement): MarkerRole | null => {
   const text = buttonText(button);
   if (!text) {
@@ -32,6 +53,9 @@ const getMarkerRole = (button: HTMLButtonElement): MarkerRole | null => {
   return null;
 };
 
+/**
+ * Finds the heading element that indicates the chat root.
+ */
 const findHeading = (doc: Document): Element | null => {
   const headings = Array.from(doc.querySelectorAll("h1, h2, h3, h4, h5, h6"));
   for (const heading of headings) {
@@ -46,12 +70,21 @@ const findHeading = (doc: Document): Element | null => {
   return null;
 };
 
+/**
+ * Checks whether a block contains user content markers.
+ */
 const hasUserContent = (element: Element) =>
   Boolean(element.querySelector('h2, [role="heading"][aria-level="2"]'));
 
+/**
+ * Checks whether a block contains Gemini content markers.
+ */
 const hasGeminiContent = (element: Element) =>
   Boolean(element.querySelector("p, ul, ol, pre, code, table"));
 
+/**
+ * Finds the closest ancestor that represents a message block.
+ */
 const findClosestBlock = (start: Element, role: MarkerRole, root: Element): Element => {
   let current: Element | null = start.parentElement;
   while (current && current !== root) {
@@ -66,6 +99,9 @@ const findClosestBlock = (start: Element, role: MarkerRole, root: Element): Elem
   return start.parentElement ?? start;
 };
 
+/**
+ * Collects button markers from the root element.
+ */
 const findMarkers = (root: Element): MarkerMatch[] => {
   const buttons = Array.from(root.querySelectorAll("button"));
   const matches: MarkerMatch[] = [];
@@ -78,6 +114,9 @@ const findMarkers = (root: Element): MarkerMatch[] => {
   return matches;
 };
 
+/**
+ * Comparator that sorts elements by document order.
+ */
 const compareDocumentOrder = (a: Element, b: Element) => {
   if (a === b) {
     return 0;
@@ -92,6 +131,9 @@ const compareDocumentOrder = (a: Element, b: Element) => {
   return 0;
 };
 
+/**
+ * Returns marker buttons for the specified role within the element.
+ */
 export const getMarkerButtons = (element: Element, role: MarkerRole) => {
   const markers = role === "user" ? USER_MARKERS : GEMINI_MARKERS;
   return Array.from(element.querySelectorAll<HTMLButtonElement>("button")).filter((button) =>
@@ -99,6 +141,9 @@ export const getMarkerButtons = (element: Element, role: MarkerRole) => {
   );
 };
 
+/**
+ * Finds the root element that contains the chat content.
+ */
 export function findChatRoot(doc: Document): Element | null {
   const heading = findHeading(doc);
   if (heading) {
@@ -116,6 +161,9 @@ export function findChatRoot(doc: Document): Element | null {
   return doc.querySelector("main") ?? doc.body;
 }
 
+/**
+ * Collects message blocks for the chat, ordered by appearance.
+ */
 export function findMessageBlocks(root: Element): Element[] {
   const markers = findMarkers(root);
   const blockSet = new Set<Element>();
@@ -132,6 +180,9 @@ export function findMessageBlocks(root: Element): Element[] {
   return blocks;
 }
 
+/**
+ * Splits a block that contains both user and Gemini markers into two ordered blocks.
+ */
 export function splitMixedBlock(root: Element, block: Element): Element[] {
   const userMarkers = getMarkerButtons(block, "user");
   const geminiMarkers = getMarkerButtons(block, "gemini");

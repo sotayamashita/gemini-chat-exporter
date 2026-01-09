@@ -1,5 +1,14 @@
+/**
+ * Pads a numeric value to two digits.
+ */
 const pad = (value: number) => String(value).padStart(2, "0");
 
+/**
+ * Formats a local ISO-8601 timestamp with timezone offset.
+ *
+ * @param date - The date to format (defaults to now).
+ * @returns ISO-8601 timestamp string with local offset.
+ */
 export function getLocalIsoTimestamp(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = pad(date.getMonth() + 1);
