@@ -32,6 +32,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 17:45JST) Added popup-side download fallback when background messaging is unavailable.
 - [x] (2026-01-09 17:55JST) Collapsed popup debug info behind a details/summary control by default.
 - [x] (2026-01-09 18:05JST) Fixed debug state setter to accept functional updates so lint-staged compile passes.
+- [x] (2026-01-09 18:10JST) Committed export feature changes and passed lint-staged (oxfmt/oxlint/compile/build).
 
 ## Surprises & Discoveries
 
@@ -399,6 +400,10 @@ Concrete steps executed (2026-01-09 09:10JST - 10:30JST):
       $ cat entrypoints/popup/App.tsx
       (allow functional updates to satisfy TypeScript)
 
+  - Commit hook validations:
+      $ git commit -m "feat: export current Gemini chat"
+      (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -444,6 +449,8 @@ Vitest unit test validation steps:
 Validation status (2026-01-09 10:30JST): No runtime validation executed yet. `pnpm compile`, manual extension export flow, and Playwright/Vitest checks are pending.
 
 Validation status (2026-01-09 16:35JST): `pnpm compile` succeeded (tsc --noEmit).
+
+Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnpm build` successfully during commit hook.
 
 ## Idempotence and Recovery
 
