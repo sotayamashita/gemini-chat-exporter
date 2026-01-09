@@ -189,16 +189,16 @@ Define a shared message contract module (for example `src/export/messages.ts` or
 
 The extraction algorithm should explicitly distinguish user vs. Gemini messages. The recommended approach is:
 
-1) Find the main chat region under the “Gemini との会話” heading and iterate its direct message group containers in DOM order.
-2) For each candidate group, identify role markers:
+1. Find the main chat region under the “Gemini との会話” heading and iterate its direct message group containers in DOM order.
+2. For each candidate group, identify role markers:
    - User marker: presence of a button with aria-label/text “プロンプトをコピー” and a nearby heading level 2 containing the user prompt text.
    - Gemini marker: presence of a button with aria-label/text “思考プロセスを表示” OR feedback controls (“良い回答”/“悪い回答”).
-3) If both markers appear due to nested structure, scope to the smallest container that contains exactly one marker set and treat it as a single message block.
-4) Extract content:
+3. If both markers appear due to nested structure, scope to the smallest container that contains exactly one marker set and treat it as a single message block.
+4. Extract content:
    - User: take the heading level 2 text as the message body; also include any paragraphs within the same block if present.
    - Gemini: serialize paragraph elements to Markdown, serialize lists to Markdown lists, and serialize code blocks by reading the `code` element and wrapping with triple backticks and the language label if present.
    - Tables: serialize to Markdown table if the structure is simple; otherwise fall back to plain text with row separators.
-5) Timestamp: attempt to locate a time element within the message block (e.g., `time` tag or a recognizable aria-label). If none is found, set timestamp to null; do not synthesize timestamps from ordering.
+5. Timestamp: attempt to locate a time element within the message block (e.g., `time` tag or a recognizable aria-label). If none is found, set timestamp to null; do not synthesize timestamps from ordering.
 
 DOM traversal order and fallback rules (additive, deterministic):
 
@@ -300,244 +300,245 @@ For Vitest, document the exact setup: add `vitest`, `@vitest/coverage-v8`, and `
 
 ## Concrete Steps
 
-1) Inspect Gemini DOM to define selectors and export mapping.
+1. Inspect Gemini DOM to define selectors and export mapping.
    - Method A (preferred): Use Playwright MCP to open `https://gemini.google.com/app/{chat_id}` and inspect nodes for message roles and content. This requires login; ask the user to log in when needed.
    - Method B (fallback): Manual inspection in a logged-in browser, then document selectors in this plan.
 
-2) Update `wxt.config.ts` (and any required WXT manifest config) to include host permissions for `https://gemini.google.com/app/*` and the `downloads` permission.
+2. Update `wxt.config.ts` (and any required WXT manifest config) to include host permissions for `https://gemini.google.com/app/*` and the `downloads` permission.
 
-3) Implement content extraction in `entrypoints/content.ts`.
+3. Implement content extraction in `entrypoints/content.ts`.
    - Add a message handler for `export-current-chat`.
    - Return `chatId` plus an array of `{ role, markdown, text, timestamp, order }` objects.
 
-4) Implement popup UI in `entrypoints/popup/App.tsx`.
+4. Implement popup UI in `entrypoints/popup/App.tsx`.
    - Add a single export button and status text.
    - Use `chrome.tabs.query` to find the active tab and send a message to the content script.
 
-5) Implement background download in `entrypoints/background.ts`.
+5. Implement background download in `entrypoints/background.ts`.
    - Add a message handler for `download-export` with payload `{ filename, markdown }`.
    - Call `chrome.downloads.download` with a blob or data URL.
 
-6) Validate end-to-end behavior by opening a Gemini chat and exporting to a Markdown file.
+6. Validate end-to-end behavior by opening a Gemini chat and exporting to a Markdown file.
 
-7) Add a local Playwright E2E script that loads the extension in Chromium and validates the export flow, including verifying the downloaded file name and header.
+7. Add a local Playwright E2E script that loads the extension in Chromium and validates the export flow, including verifying the downloaded file name and header.
 
-8) Research and add Vitest unit test setup with coverage reporting for the extraction logic, including example fixtures and a test command.
+8. Research and add Vitest unit test setup with coverage reporting for the extraction logic, including example fixtures and a test command.
 
-9) Implement the Vitest configuration and scripts:
+9. Implement the Vitest configuration and scripts:
    - Add dev dependencies: `vitest`, `@vitest/coverage-v8`, and `jsdom`.
    - Create `vitest.config.ts` with `test.environment = "jsdom"` and `test.coverage.provider = "v8"`, plus `test.coverage.include = ["src/**/*.{ts,tsx}"]`.
    - Add `test` and `test:coverage` scripts to `package.json` (`vitest` and `vitest run --coverage`).
 
 Concrete steps executed (2026-01-09 09:10JST - 10:30JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Listed files and inspected plan/config:
-      $ ls
-      AGENTS.md
-      assets
-      CLAUDE.md
-      commitlint.config.js
-      entrypoints
-      lint-staged.config.js
-      node_modules
-      package.json
-      pnpm-lock.yaml
-      pnpm-workspace.yaml
-      public
-      README.md
-      tsconfig.json
-      wxt.config.ts
-      $ cat .agent/PLANS.md
-      (confirmed ExecPlan requirements and formatting rules)
-      $ cat .agent/plans/2026-01-09-gemini-chat-export.md
-      (confirmed plan scope and milestones)
+- Listed files and inspected plan/config:
+  $ ls
+  AGENTS.md
+  assets
+  CLAUDE.md
+  commitlint.config.js
+  entrypoints
+  lint-staged.config.js
+  node_modules
+  package.json
+  pnpm-lock.yaml
+  pnpm-workspace.yaml
+  public
+  README.md
+  tsconfig.json
+  wxt.config.ts
+  $ cat .agent/PLANS.md
+  (confirmed ExecPlan requirements and formatting rules)
+  $ cat .agent/plans/2026-01-09-gemini-chat-export.md
+  (confirmed plan scope and milestones)
 
-  - Created export core modules and updated entrypoints:
-      $ mkdir -p src/export
-      (created src/export/types.ts, markers.ts, discovery.ts, extract.ts, serialize.ts, url.ts, time.ts, messages.ts)
-      $ cat entrypoints/content.ts
-      (replaced with export handler, auto-scroll, and extraction wiring)
-      $ cat entrypoints/background.ts
-      (replaced with download handler)
-      $ cat entrypoints/popup/App.tsx
-      (replaced popup UI and messaging)
+- Created export core modules and updated entrypoints:
+  $ mkdir -p src/export
+  (created src/export/types.ts, markers.ts, discovery.ts, extract.ts, serialize.ts, url.ts, time.ts, messages.ts)
+  $ cat entrypoints/content.ts
+  (replaced with export handler, auto-scroll, and extraction wiring)
+  $ cat entrypoints/background.ts
+  (replaced with download handler)
+  $ cat entrypoints/popup/App.tsx
+  (replaced popup UI and messaging)
 
-  - Updated popup styling and manifest permissions:
-      $ cat entrypoints/popup/style.css
-      (replaced base popup styles)
-      $ cat entrypoints/popup/App.css
-      (replaced popup component styles)
-      $ cat wxt.config.ts
-      (added downloads + host permissions)
+- Updated popup styling and manifest permissions:
+  $ cat entrypoints/popup/style.css
+  (replaced base popup styles)
+  $ cat entrypoints/popup/App.css
+  (replaced popup component styles)
+  $ cat wxt.config.ts
+  (added downloads + host permissions)
 
-  - Hardened popup/content script messaging:
-      $ cat entrypoints/popup/App.tsx
-      (added guard for undefined response and clearer content-script-not-ready errors)
-      $ cat entrypoints/content.ts
-      (made message handler explicitly async)
+- Hardened popup/content script messaging:
+  $ cat entrypoints/popup/App.tsx
+  (added guard for undefined response and clearer content-script-not-ready errors)
+  $ cat entrypoints/content.ts
+  (made message handler explicitly async)
 
-  - Verified TypeScript compile:
-      $ pnpm compile
-      > wxt-react-starter@0.0.0 compile /Users/sotayamashita/Projects/autify/gemini-chat-exporter
-      > tsc --noEmit
+- Verified TypeScript compile:
+  $ pnpm compile
 
-  - Aligned content script matches with host permissions:
-      $ cat entrypoints/content.ts
-      (changed matches to https://gemini.google.com/* and added load log)
-      $ cat wxt.config.ts
-      (changed host_permissions to https://gemini.google.com/*)
+  > wxt-react-starter@0.0.0 compile /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+  > tsc --noEmit
 
-  - Ensured popup targets the right tab:
-      $ cat entrypoints/popup/App.tsx
-      (query active tab from lastFocusedWindow)
-      $ cat wxt.config.ts
-      (added tabs permission)
+- Aligned content script matches with host permissions:
+  $ cat entrypoints/content.ts
+  (changed matches to https://gemini.google.com/_ and added load log)
+  $ cat wxt.config.ts
+  (changed host_permissions to https://gemini.google.com/_)
 
-  - Made content script responses explicit:
-      $ cat entrypoints/content.ts
-      (use sendResponse + return true, log message receipt)
+- Ensured popup targets the right tab:
+  $ cat entrypoints/popup/App.tsx
+  (query active tab from lastFocusedWindow)
+  $ cat wxt.config.ts
+  (added tabs permission)
 
-  - Added popup debug logs:
-      $ cat entrypoints/popup/App.tsx
-      (log active tab + export response + error)
+- Made content script responses explicit:
+  $ cat entrypoints/content.ts
+  (use sendResponse + return true, log message receipt)
 
-  - Added popup debug UI:
-      $ cat entrypoints/popup/App.tsx
-      (show tabId/tabUrl/response in footer)
-      $ cat entrypoints/popup/App.css
-      (style debug panel)
+- Added popup debug logs:
+  $ cat entrypoints/popup/App.tsx
+  (log active tab + export response + error)
 
-  - Guarded background download response:
-      $ cat entrypoints/popup/App.tsx
-      (check for undefined download response before accessing ok)
+- Added popup debug UI:
+  $ cat entrypoints/popup/App.tsx
+  (show tabId/tabUrl/response in footer)
+  $ cat entrypoints/popup/App.css
+  (style debug panel)
 
-  - Added popup download fallback:
-      $ cat entrypoints/popup/App.tsx
-      (fallback to downloads API if background does not respond)
+- Guarded background download response:
+  $ cat entrypoints/popup/App.tsx
+  (check for undefined download response before accessing ok)
 
-  - Collapsed popup debug panel:
-      $ cat entrypoints/popup/App.tsx
-      (wrap debug info with details/summary)
-      $ cat entrypoints/popup/App.css
-      (style summary and body spacing)
+- Added popup download fallback:
+  $ cat entrypoints/popup/App.tsx
+  (fallback to downloads API if background does not respond)
 
-  - Fixed debug state setter typing:
-      $ cat entrypoints/popup/App.tsx
-      (allow functional updates to satisfy TypeScript)
+- Collapsed popup debug panel:
+  $ cat entrypoints/popup/App.tsx
+  (wrap debug info with details/summary)
+  $ cat entrypoints/popup/App.css
+  (style summary and body spacing)
 
-  - Commit hook validations:
-      $ git commit -m "feat: export current Gemini chat"
-      (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
+- Fixed debug state setter typing:
+  $ cat entrypoints/popup/App.tsx
+  (allow functional updates to satisfy TypeScript)
+
+- Commit hook validations:
+  $ git commit -m "feat: export current Gemini chat"
+  (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
 
 Concrete steps executed (2026-01-09 17:27JST - 17:31JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Added Vitest/JSDOM dependencies:
-      $ pnpm add -D vitest @vitest/coverage-v8 jsdom
-      (added vitest 4.0.16, @vitest/coverage-v8 4.0.16, jsdom 27.4.0)
+- Added Vitest/JSDOM dependencies:
+  $ pnpm add -D vitest @vitest/coverage-v8 jsdom
+  (added vitest 4.0.16, @vitest/coverage-v8 4.0.16, jsdom 27.4.0)
 
-  - Added Vitest configuration and extraction tests:
-      $ cat vitest.config.ts
-      (configured JSDOM, V8 coverage, and @ alias)
-      $ cat src/export/__tests__/extract.test.ts
-      (added extraction tests for user + gemini messages)
+- Added Vitest configuration and extraction tests:
+  $ cat vitest.config.ts
+  (configured JSDOM, V8 coverage, and @ alias)
+  $ cat src/export/**tests**/extract.test.ts
+  (added extraction tests for user + gemini messages)
 
-  - Added test scripts:
-      $ cat package.json
-      (added test and test:coverage scripts)
+- Added test scripts:
+  $ cat package.json
+  (added test and test:coverage scripts)
 
-  - Ran Vitest unit tests and coverage:
-      $ pnpm test -- --run
-      (2 tests passed)
-      $ pnpm test:coverage
-      (coverage report generated; v8 provider)
+- Ran Vitest unit tests and coverage:
+  $ pnpm test -- --run
+  (2 tests passed)
+  $ pnpm test:coverage
+  (coverage report generated; v8 provider)
 
-  - Ignored coverage output and cleaned generated report:
-      $ cat .gitignore
-      (added coverage)
-      $ rm -rf coverage
+- Ignored coverage output and cleaned generated report:
+  $ cat .gitignore
+  (added coverage)
+  $ rm -rf coverage
 
-  - Committed Vitest setup and tests:
-      $ git commit -m "test: add vitest coverage for export extraction"
-      (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
+- Committed Vitest setup and tests:
+  $ git commit -m "test: add vitest coverage for export extraction"
+  (lint-staged ran oxfmt, oxlint --fix, pnpm compile, pnpm build)
 
 Concrete steps executed (2026-01-09 17:41JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Documented test commands in AGENTS.md:
-      $ cat AGENTS.md
-      (added pnpm test and pnpm test:coverage entries; updated Testing Guidelines)
+- Documented test commands in AGENTS.md:
+  $ cat AGENTS.md
+  (added pnpm test and pnpm test:coverage entries; updated Testing Guidelines)
 
 Concrete steps executed (2026-01-09 17:47JST - 17:49JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Added mixed-block and timestamp tests:
-      $ cat src/export/__tests__/extract.test.ts
-      (added mixed block split test and aria-label timestamp test)
+- Added mixed-block and timestamp tests:
+  $ cat src/export/**tests**/extract.test.ts
+  (added mixed block split test and aria-label timestamp test)
 
-  - Validated and fixed the mixed-block fixture:
-      $ pnpm test -- --run
-      (1 failure: mixed-block test returned 0 messages)
-      $ cat src/export/__tests__/extract.test.ts
-      (adjusted fixture to nest user/gemini blocks)
-      $ pnpm test -- --run
-      (4 tests passed)
+- Validated and fixed the mixed-block fixture:
+  $ pnpm test -- --run
+  (1 failure: mixed-block test returned 0 messages)
+  $ cat src/export/**tests**/extract.test.ts
+  (adjusted fixture to nest user/gemini blocks)
+  $ pnpm test -- --run
+  (4 tests passed)
 
 Concrete steps executed (2026-01-09 18:00JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Reverted the Playwright E2E script commit:
-      $ git revert 0b49cc70a8a0d935a9920c010ddb848ed7ff2127
+- Reverted the Playwright E2E script commit:
+  $ git revert 0b49cc70a8a0d935a9920c010ddb848ed7ff2127
 
 Concrete steps executed (2026-01-09 18:02JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Added source URL to export payload and Markdown metadata:
-      $ cat src/export/types.ts
-      (added sourceUrl field to ExportPayload)
-      $ cat entrypoints/content.ts
-      (included window.location.href in payload)
-      $ cat src/export/serialize.ts
-      (added gemini-export source-url metadata line)
+- Added source URL to export payload and Markdown metadata:
+  $ cat src/export/types.ts
+  (added sourceUrl field to ExportPayload)
+  $ cat entrypoints/content.ts
+  (included window.location.href in payload)
+  $ cat src/export/serialize.ts
+  (added gemini-export source-url metadata line)
 
 Concrete steps executed (2026-01-09 18:21JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Inspected Gemini chat DOM via Playwright MCP:
-      (navigated to https://gemini.google.com/app/735afd264d35c312)
-      (evaluated marker buttons and heading roles for user prompts)
+- Inspected Gemini chat DOM via Playwright MCP:
+  (navigated to https://gemini.google.com/app/735afd264d35c312)
+  (evaluated marker buttons and heading roles for user prompts)
 
 Concrete steps executed (2026-01-09 18:22JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Expanded user heading detection to role/aria-level:
-      $ cat src/export/discovery.ts
-      (accepts h2 and role=\"heading\" aria-level=\"2\")
-      $ cat src/export/extract.ts
-      (selects heading from h2 or role/aria heading)
+- Expanded user heading detection to role/aria-level:
+  $ cat src/export/discovery.ts
+  (accepts h2 and role=\"heading\" aria-level=\"2\")
+  $ cat src/export/extract.ts
+  (selects heading from h2 or role/aria heading)
 
-  - Updated tests and verified:
-      $ cat src/export/__tests__/extract.test.ts
-      (timestamp test now uses role/aria heading)
-      $ pnpm test -- --run
-      (4 tests passed)
+- Updated tests and verified:
+  $ cat src/export/**tests**/extract.test.ts
+  (timestamp test now uses role/aria heading)
+  $ pnpm test -- --run
+  (4 tests passed)
 
 Concrete steps executed (2026-01-09 20:03JST):
 
-  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
-  - Updated CI to read Node/pnpm versions from mise.toml:
-      $ cat .github/workflows/ci.yml
-      (added mise.toml parsing step and wired setup-node/pnpm action versions)
+- Updated CI to read Node/pnpm versions from mise.toml:
+  $ cat .github/workflows/ci.yml
+  (added mise.toml parsing step and wired setup-node/pnpm action versions)
 
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
@@ -649,8 +650,9 @@ For unit testing, add Vitest as a dev dependency and configure it to use a DOM e
 Create a small, pure-core module for extraction and serialization logic (for example `src/export/` or `src/core/`) and keep it free of Chrome or WXT APIs. The content script should be the only place that touches real DOM discovery and calls into this core. The popup and background scripts should depend only on typed message contracts and should not import extraction code.
 
 If implementation is blocked or unclear, consult the WXT repository via DeepWiki and the Chrome Extensions documentation via Context7 or web search. This should be explicitly used when questions arise about WXT configuration, extension entrypoints, or permissions. Repositories to consult:
-  - WXT: https://github.com/wxt-dev/wxt (via DeepWiki)
-  - Chrome Extensions docs: https://developer.chrome.com/docs/extensions (via Context7 or web search)
+
+- WXT: https://github.com/wxt-dev/wxt (via DeepWiki)
+- Chrome Extensions docs: https://developer.chrome.com/docs/extensions (via Context7 or web search)
 
 Define the core modules and signatures explicitly so their responsibilities are unambiguous. A concrete, minimal set is:
 
@@ -746,9 +748,9 @@ Plan change note: Initial plan created on 2026-01-09 to focus on export of the c
 Plan change note: Added minimal DOM structure cues and clarified where user vs. Gemini blocks appear to guide extraction logic without relying on full DOM dumps.
 
 Plan change note: Added explicit auto-scroll retry flow, aligned long-chat handling with “retry instead of partial export,” and clarified export payload fields.
-    scroll container (observed):
-      infinite-scroller.chat-history
-      div.chat-history-scroll-container
+scroll container (observed):
+infinite-scroller.chat-history
+div.chat-history-scroll-container
 
 Plan change note: Added an optional local Playwright E2E script plan to automate extension-loaded Chromium validation of the popup export flow, per request to verify using Playwright.
 
