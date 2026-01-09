@@ -25,6 +25,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
 - [x] (2026-01-09 17:47JST) Added two more extraction unit tests for mixed-block splitting and timestamp detection.
 - [x] (2026-01-09 18:02JST) Included the source chat URL in exported Markdown metadata.
+- [x] (2026-01-09 18:21JST) Confirmed user prompt heading uses role/aria-level instead of h2, causing missing user messages.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -68,6 +69,9 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Observation: Mixed-block test failed when user and gemini markers lived in the same container without nested blocks; no messages were extracted.
   Evidence: `pnpm test -- --run` failed with “expected [] to have a length of 2 but got +0” in `splits mixed blocks into user and gemini segments` (2026-01-09 17:48JST). The fixture was updated to separate user/gemini into nested blocks.
+
+- Observation: User prompt text is rendered as a `div` with `role="heading"` and `aria-level="2"`, not an actual `h2`, so `querySelector("h2")` misses it and the user message becomes empty.
+  Evidence: Playwright evaluation found the nearest heading to the “プロンプトをコピー” button at `div.query-content...` with `role="heading"`, `aria-level="2"`, and text “こんにちは” (2026-01-09 18:21JST).
 
 ## Decision Log
 
@@ -500,6 +504,14 @@ Concrete steps executed (2026-01-09 18:02JST):
       (included window.location.href in payload)
       $ cat src/export/serialize.ts
       (added gemini-export source-url metadata line)
+
+Concrete steps executed (2026-01-09 18:21JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Inspected Gemini chat DOM via Playwright MCP:
+      (navigated to https://gemini.google.com/app/735afd264d35c312)
+      (evaluated marker buttons and heading roles for user prompts)
 
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
