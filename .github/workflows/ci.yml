@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tool versions from mise.toml
+        id: tool-versions
+        run: |
+          node_version=$(awk -F'=' '/^node/ {gsub(/[ "]/,"",$2); print $2}' mise.toml)
+          pnpm_version=$(awk -F'=' '/^pnpm/ {gsub(/[ "]/,"",$2); print $2}' mise.toml)
+          if [ "$node_version" = "lts" ]; then
+            node_version="lts/*"
+          fi
+          echo "node=$node_version" >> "$GITHUB_OUTPUT"
+          echo "pnpm=$pnpm_version" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ steps.tool-versions.outputs.pnpm }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tool-versions.outputs.node }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type check
+        run: pnpm run compile
+
+      - name: Run lint
+        run: pnpm run lint
+
+      - name: Run format check
+        run: pnpm run format:check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve tool versions from mise.toml
+        id: tool-versions
+        run: |
+          node_version=$(awk -F'=' '/^node/ {gsub(/[ "]/,"",$2); print $2}' mise.toml)
+          pnpm_version=$(awk -F'=' '/^pnpm/ {gsub(/[ "]/,"",$2); print $2}' mise.toml)
+          if [ "$node_version" = "lts" ]; then
+            node_version="lts/*"
+          fi
+          echo "node=$node_version" >> "$GITHUB_OUTPUT"
+          echo "pnpm=$pnpm_version" >> "$GITHUB_OUTPUT"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ steps.tool-versions.outputs.pnpm }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tool-versions.outputs.node }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build extension
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-build
+
+          # Path to the build output folder
+          # WXT's default build directory is ".output/"
+          # The double asterisk ensures all nested files are included
+          path: .output/**
+
+          # Fail the step if the path does not exist or has no files
+          if-no-files-found: error
+
+          # Enable uploading of hidden files/folders (dot-prefixed names)
+          include-hidden-files: true
+
+          # Whether to overwrite an existing artifact with the same name
+          overwrite: false

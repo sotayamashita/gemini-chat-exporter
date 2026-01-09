@@ -18,7 +18,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 10:00JST) Implemented export core modules (`src/export/*`) and shared runtime message contracts.
 - [x] (2026-01-09 10:10JST) Implemented content script extraction, auto-scroll handling, and payload response wiring.
 - [x] (2026-01-09 10:25JST) Implemented popup export UI, background download handler, and WXT manifest permissions.
-- [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
+- [ ] Canceld. ~~Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).~~
 - [x] (2026-01-09 18:00JST) Reverted Playwright E2E script commit per request.
 - [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
@@ -27,6 +27,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 18:02JST) Included the source chat URL in exported Markdown metadata.
 - [x] (2026-01-09 18:21JST) Confirmed user prompt heading uses role/aria-level instead of h2, causing missing user messages.
 - [x] (2026-01-09 18:22JST) Expand user prompt extraction to support role/aria-level headings and adjust tests.
+- [x] (2026-01-09 20:03JST) Synced CI Node/pnpm versions with mise.toml in GitHub Actions workflow.
 - [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
 - [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
 - [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
@@ -530,6 +531,14 @@ Concrete steps executed (2026-01-09 18:22JST):
       $ pnpm test -- --run
       (4 tests passed)
 
+Concrete steps executed (2026-01-09 20:03JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Updated CI to read Node/pnpm versions from mise.toml:
+      $ cat .github/workflows/ci.yml
+      (added mise.toml parsing step and wired setup-node/pnpm action versions)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -786,3 +795,5 @@ Plan change note: Reverted the Playwright E2E script commit per user request and
 Plan change note: Added source chat URL metadata to the exported Markdown.
 
 Plan change note: Updated user prompt extraction to include role/aria headings in addition to h2 tags and adjusted tests.
+
+Plan change note: Updated CI workflow to derive Node and pnpm versions from mise.toml.
