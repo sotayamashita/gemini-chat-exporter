@@ -13,12 +13,25 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 00:00Z) Created initial ExecPlan scoped to exporting the current Gemini chat via popup-triggered download.
 - [x] (2026-01-09 00:20Z) Inspected Gemini chat DOM while logged in and captured candidate markers for user vs. Gemini messages and code blocks.
 - [x] (2026-01-09 00:30Z) Added minimal DOM structure cues needed to guide extraction logic.
-- [ ] Implement message extraction in content script and message passing to background/popup.
-- [ ] Implement download flow and popup UI wiring; validate end-to-end export.
+- [x] (2026-01-09 09:10JST) Started implementation for export core + entrypoints and plan updates.
+- [x] (2026-01-09 10:00JST) Implemented export core modules (`src/export/*`) and shared runtime message contracts.
+- [x] (2026-01-09 10:10JST) Implemented content script extraction, auto-scroll handling, and payload response wiring.
+- [x] (2026-01-09 10:25JST) Implemented popup export UI, background download handler, and WXT manifest permissions.
 - [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
 - [ ] Research and add Vitest unit test setup with coverage report generation for extraction logic.
-- [ ] Define a maintainable, loosely coupled architecture and reflect it in module boundaries and test strategy.
-- [ ] Define explicit runtime message contracts between content, popup, and background.
+- [x] (2026-01-09 10:25JST) Defined a maintainable architecture with a pure export core and thin entrypoint adapters.
+- [x] (2026-01-09 10:25JST) Defined explicit runtime message contracts shared across entrypoints.
+- [x] (2026-01-09 16:20JST) Hardened popup messaging error handling for missing content script responses.
+- [x] (2026-01-09 16:35JST) Fixed TypeScript compile error for `Element.innerText` usage and confirmed `pnpm compile` passes.
+- [x] (2026-01-09 16:50JST) Broadened content script and host match patterns to `https://gemini.google.com/*` and added content script load logging for injection debugging.
+- [x] (2026-01-09 16:55JST) Added `tabs` permission and switched popup tab query to `lastFocusedWindow` to target the active Gemini tab.
+- [x] (2026-01-09 17:05JST) Reworked content script message listener to use `sendResponse` + `return true` and added export receipt logging.
+- [x] (2026-01-09 17:15JST) Added popup-side debug logging for active tab and export response to diagnose missing receiver.
+- [x] (2026-01-09 17:25JST) Added popup UI debug panel showing tab/response details to diagnose messaging issues without DevTools.
+- [x] (2026-01-09 17:35JST) Guarded against undefined background download responses to avoid popup runtime errors.
+- [x] (2026-01-09 17:45JST) Added popup-side download fallback when background messaging is unavailable.
+- [x] (2026-01-09 17:55JST) Collapsed popup debug info behind a details/summary control by default.
+- [x] (2026-01-09 18:05JST) Fixed debug state setter to accept functional updates so lint-staged compile passes.
 
 ## Surprises & Discoveries
 
@@ -36,6 +49,15 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Observation: The primary scroll container appears to be an `infinite-scroller.chat-history` element inside a `div.chat-history-scroll-container`.
   Evidence: Playwright evaluation on `https://gemini.google.com/app/cbb342fdc6010a5e` found the largest scrollable element with tag `infinite-scroller` and class `chat-history`.
+
+- Observation: Popup saw `Cannot read properties of undefined (reading 'ok')` when `browser.tabs.sendMessage` returned undefined (no content script response).
+  Evidence: User screenshot showing the popup error in the status panel on 2026-01-09.
+
+- Observation: Content script loads (log present) but popup still reports missing receiver, implying tab lookup or messaging permission mismatch.
+  Evidence: User console log shows `[gemini-export] content script loaded https://gemini.google.com/app/735afd264d35c312` while popup reports “Content script not available” on 2026-01-09.
+
+- Observation: Background service worker did not respond to `download-export`, but popup-side `downloads` fallback succeeded and export completed.
+  Evidence: Popup debug panel showed `response: {"ok":true,...}` yet displayed “Background script not available,” followed by successful download after adding popup download fallback (2026-01-09).
 
 ## Decision Log
 
@@ -97,6 +119,14 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 
 - Decision: Centralize runtime message contracts in a shared type module to keep entrypoints loosely coupled and consistent.
   Rationale: A single source of truth for message payloads avoids drift and makes refactors safer.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Treat missing chat scroll container as a hard error and instruct the user to reload Gemini before retrying export.
+  Rationale: Without a scroll container, auto-scroll safety checks cannot verify full history; failing early prevents partial exports.
+  Date/Author: 2026-01-09 / Codex
+
+- Decision: Add `tabs` permission and query the last focused window to ensure popup targets the active Gemini tab.
+  Rationale: The content script loads but `tabs.sendMessage` appears to target the wrong tab or lacks permission, so we align tab lookup and permissions to the popup context.
   Date/Author: 2026-01-09 / Codex
 
 ## Outcomes & Retrospective
@@ -271,6 +301,104 @@ For Vitest, document the exact setup: add `vitest`, `@vitest/coverage-v8`, and `
    - Create `vitest.config.ts` with `test.environment = "jsdom"` and `test.coverage.provider = "v8"`, plus `test.coverage.include = ["src/**/*.{ts,tsx}"]`.
    - Add `test` and `test:coverage` scripts to `package.json` (`vitest` and `vitest run --coverage`).
 
+Concrete steps executed (2026-01-09 09:10JST - 10:30JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Listed files and inspected plan/config:
+      $ ls
+      AGENTS.md
+      assets
+      CLAUDE.md
+      commitlint.config.js
+      entrypoints
+      lint-staged.config.js
+      node_modules
+      package.json
+      pnpm-lock.yaml
+      pnpm-workspace.yaml
+      public
+      README.md
+      tsconfig.json
+      wxt.config.ts
+      $ cat .agent/PLANS.md
+      (confirmed ExecPlan requirements and formatting rules)
+      $ cat .agent/plans/2026-01-09-gemini-chat-export.md
+      (confirmed plan scope and milestones)
+
+  - Created export core modules and updated entrypoints:
+      $ mkdir -p src/export
+      (created src/export/types.ts, markers.ts, discovery.ts, extract.ts, serialize.ts, url.ts, time.ts, messages.ts)
+      $ cat entrypoints/content.ts
+      (replaced with export handler, auto-scroll, and extraction wiring)
+      $ cat entrypoints/background.ts
+      (replaced with download handler)
+      $ cat entrypoints/popup/App.tsx
+      (replaced popup UI and messaging)
+
+  - Updated popup styling and manifest permissions:
+      $ cat entrypoints/popup/style.css
+      (replaced base popup styles)
+      $ cat entrypoints/popup/App.css
+      (replaced popup component styles)
+      $ cat wxt.config.ts
+      (added downloads + host permissions)
+
+  - Hardened popup/content script messaging:
+      $ cat entrypoints/popup/App.tsx
+      (added guard for undefined response and clearer content-script-not-ready errors)
+      $ cat entrypoints/content.ts
+      (made message handler explicitly async)
+
+  - Verified TypeScript compile:
+      $ pnpm compile
+      > wxt-react-starter@0.0.0 compile /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+      > tsc --noEmit
+
+  - Aligned content script matches with host permissions:
+      $ cat entrypoints/content.ts
+      (changed matches to https://gemini.google.com/* and added load log)
+      $ cat wxt.config.ts
+      (changed host_permissions to https://gemini.google.com/*)
+
+  - Ensured popup targets the right tab:
+      $ cat entrypoints/popup/App.tsx
+      (query active tab from lastFocusedWindow)
+      $ cat wxt.config.ts
+      (added tabs permission)
+
+  - Made content script responses explicit:
+      $ cat entrypoints/content.ts
+      (use sendResponse + return true, log message receipt)
+
+  - Added popup debug logs:
+      $ cat entrypoints/popup/App.tsx
+      (log active tab + export response + error)
+
+  - Added popup debug UI:
+      $ cat entrypoints/popup/App.tsx
+      (show tabId/tabUrl/response in footer)
+      $ cat entrypoints/popup/App.css
+      (style debug panel)
+
+  - Guarded background download response:
+      $ cat entrypoints/popup/App.tsx
+      (check for undefined download response before accessing ok)
+
+  - Added popup download fallback:
+      $ cat entrypoints/popup/App.tsx
+      (fallback to downloads API if background does not respond)
+
+  - Collapsed popup debug panel:
+      $ cat entrypoints/popup/App.tsx
+      (wrap debug info with details/summary)
+      $ cat entrypoints/popup/App.css
+      (style summary and body spacing)
+
+  - Fixed debug state setter typing:
+      $ cat entrypoints/popup/App.tsx
+      (allow functional updates to satisfy TypeScript)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -312,6 +440,10 @@ Vitest unit test validation steps:
 - Run the Vitest command that executes unit tests and generates a coverage report.
 - Expect a passing test summary and a coverage report directory to be created (or updated) with a human-readable report.
 - Confirm the coverage run uses the V8 provider and includes files under `src/` even if some are not imported by tests. citeturn1view0
+
+Validation status (2026-01-09 10:30JST): No runtime validation executed yet. `pnpm compile`, manual extension export flow, and Playwright/Vitest checks are pending.
+
+Validation status (2026-01-09 16:35JST): `pnpm compile` succeeded (tsc --noEmit).
 
 ## Idempotence and Recovery
 
@@ -480,3 +612,23 @@ Plan change note: Added explicit runtime message contracts and a shared type mod
 Plan change note: Added concrete Vitest setup details (dev dependencies, config, scripts, and coverage command) to make unit testing with coverage reproducible.
 
 Plan change note: Added guidance to consult WXT via DeepWiki and Chrome Extensions docs via Context7/search when implementation questions arise.
+
+Plan change note: Updated progress, decision log, concrete steps, and validation status to reflect the implemented export core, entrypoint wiring, and manifest/popup updates.
+
+Plan change note: Recorded the missing content script response issue and added popup-side guards for undefined responses and receiver-missing errors.
+
+Plan change note: Broadened content script matches and host permissions to `https://gemini.google.com/*` and added a content script load log to debug injection.
+
+Plan change note: Added `tabs` permission and adjusted popup tab query to `lastFocusedWindow` to reduce “content script not available” errors when the popup targets the wrong tab.
+
+Plan change note: Switched content script messaging to explicit `sendResponse` with `return true` and added receipt/error logs to debug message delivery.
+
+Plan change note: Added popup-side debug logs for active tab resolution and export response to pinpoint missing receiver.
+
+Plan change note: Added popup UI debug panel so tab/response info is visible without DevTools.
+
+Plan change note: Added guard for undefined background download responses to prevent popup errors when background messaging fails.
+
+Plan change note: Added popup-side download fallback using downloads API when background messaging is unavailable, to ensure export still completes.
+
+Plan change note: Collapsed debug information behind a details/summary control and recorded the background-response discovery.
