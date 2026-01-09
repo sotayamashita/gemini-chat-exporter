@@ -18,7 +18,7 @@ After this change, a user can open a Gemini chat page at `https://gemini.google.
 - [x] (2026-01-09 10:00JST) Implemented export core modules (`src/export/*`) and shared runtime message contracts.
 - [x] (2026-01-09 10:10JST) Implemented content script extraction, auto-scroll handling, and payload response wiring.
 - [x] (2026-01-09 10:25JST) Implemented popup export UI, background download handler, and WXT manifest permissions.
-- [ ] Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
+- [x] (2026-01-09 17:52JST) Add Playwright E2E script that loads the extension in Chromium and validates the export flow (popup click → download file).
 - [x] (2026-01-09 17:33JST) Researched and added Vitest unit test setup with coverage report generation for extraction logic.
 - [x] (2026-01-09 17:33JST) Committed Vitest configuration, tests, and coverage scripts.
 - [x] (2026-01-09 17:41JST) Documented Vitest commands and testing guidance in AGENTS.md.
@@ -472,6 +472,24 @@ Concrete steps executed (2026-01-09 17:47JST - 17:49JST):
       $ pnpm test -- --run
       (4 tests passed)
 
+Concrete steps executed (2026-01-09 17:52JST - 17:53JST):
+
+  Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+
+  - Added Playwright dependency and E2E script:
+      $ pnpm add -D playwright
+      (added playwright 1.57.0)
+      $ cat scripts/e2e-export.mjs
+      (created script to load extension, click popup export, and verify download)
+
+  - Added E2E script command and docs:
+      $ cat package.json
+      (added e2e:export script)
+      $ cat AGENTS.md
+      (documented pnpm e2e:export usage)
+      $ cat .gitignore
+      (ignored .e2e-downloads)
+
 All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
 
 ## Validation and Acceptance
@@ -523,6 +541,8 @@ Validation status (2026-01-09 17:31JST): `pnpm test -- --run` passed (2 tests). 
 Validation status (2026-01-09 18:10JST): lint-staged ran `pnpm compile` and `pnpm build` successfully during commit hook.
 
 Validation status (2026-01-09 17:49JST): `pnpm test -- --run` passed (4 tests) after adjusting the mixed-block fixture.
+
+Validation status (2026-01-09 17:53JST): Playwright E2E script added but not executed (requires logged-in Gemini and GEMINI_CHAT_URL).
 
 ## Idempotence and Recovery
 
@@ -717,3 +737,5 @@ Plan change note: Added Vitest configuration, scripts, and extraction unit tests
 Plan change note: Recorded the Vitest setup commit and coverage output ignore step in progress and concrete steps.
 
 Plan change note: Updated AGENTS.md to document Vitest test and coverage commands and reflect the new testing guidelines.
+
+Plan change note: Added a Playwright-based E2E export script, documented its command, and recorded validation status as pending manual run.
