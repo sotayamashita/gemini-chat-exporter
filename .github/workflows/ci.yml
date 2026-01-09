@@ -180,7 +180,7 @@ jobs:
         run: pnpm run zip
 
       - name: Rename zip file
-        run: mv .output/wxt-react-starter-${{ steps.daily_version.outputs.version }}-chrome.zip wxt-react-starter-chrome-${{ steps.daily_version.outputs.version }}.zip
+        run: mv .output/gemini-chat-exporter-${{ steps.daily_version.outputs.version }}-chrome.zip gemini-chat-exporter-chrome-${{ steps.daily_version.outputs.version }}.zip
 
       - name: Check if release exists
         id: check_release
@@ -203,6 +203,6 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            wxt-react-starter-chrome-${{ steps.daily_version.outputs.version }}.zip
+            gemini-chat-exporter-chrome-${{ steps.daily_version.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
