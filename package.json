@@ -5,6 +5,8 @@
   "description": "manifest.json description",
   "type": "module",
   "scripts": {
+    "prepare": "husky",
+    "postinstall": "wxt prepare",
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
@@ -15,17 +17,20 @@
     "format:check": "oxfmt --check",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "compile": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.3.0",
+    "@commitlint/config-conventional": "^20.3.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "oxfmt": "^0.23.0",
     "oxlint": "^1.38.0",
     "typescript": "^5.9.3",
