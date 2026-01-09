@@ -1,8 +1,8 @@
 {
-  "name": "wxt-react-starter",
+  "name": "gemini-chat-exporter",
   "version": "0.0.0",
   "private": true,
-  "description": "manifest.json description",
+  "description": "Export Gemini chats to Markdown",
   "type": "module",
   "scripts": {
     "prepare": "husky",
