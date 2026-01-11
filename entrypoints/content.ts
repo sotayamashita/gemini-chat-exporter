@@ -1,6 +1,10 @@
 import { findChatRoot } from "@/src/export/discovery";
 import { extractMessages } from "@/src/export/extract";
-import type { ExportCurrentChatRequest, ExportCurrentChatResponse } from "@/src/export/messages";
+import type {
+  ExportCurrentChatRequest,
+  ExportCurrentChatResponse,
+  ExportStatusUpdate,
+} from "@/src/export/messages";
 import { getChatIdFromUrl } from "@/src/export/url";
 
 type ScrollResult = { ok: true } | { ok: false; error: string };
@@ -39,9 +43,20 @@ const findScrollContainer = (root: Element): ScrollContainer | null => {
   return best;
 };
 
-const autoScrollToTop = async (container: ScrollContainer): Promise<ScrollResult> => {
+const autoScrollToTop = async (
+  container: ScrollContainer,
+  onPhase: (update: ExportStatusUpdate) => void,
+): Promise<ScrollResult> => {
   let previousTop = container.scrollTop;
   for (let iteration = 0; iteration < SCROLL_MAX_ITERATIONS; iteration += 1) {
+    if (iteration === 0) {
+      onPhase({
+        type: "export-status",
+        phase: "scrolling",
+        detail:
+          container.scrollTop === 0 ? "Checking for older messages…" : "Scrolling chat history…",
+      });
+    }
     const nextTop = Math.max(0, container.scrollTop - SCROLL_STEP);
     container.scrollTop = nextTop;
     await wait(SCROLL_DELAY);
@@ -69,6 +84,10 @@ const autoScrollToTop = async (container: ScrollContainer): Promise<ScrollResult
   };
 };
 
+const sendStatusUpdate = (update: ExportStatusUpdate) => {
+  void browser.runtime.sendMessage(update);
+};
+
 const handleExport = async (): Promise<ExportCurrentChatResponse> => {
   const chatId = getChatIdFromUrl(window.location.href);
   if (!chatId) {
@@ -88,16 +107,29 @@ const handleExport = async (): Promise<ExportCurrentChatResponse> => {
     };
   }
 
-  const scrollResult = await autoScrollToTop(scrollContainer);
+  sendStatusUpdate({
+    type: "export-status",
+    phase: "scrolling",
+    detail: "Checking for older messages…",
+  });
+  const scrollResult = await autoScrollToTop(scrollContainer, sendStatusUpdate);
   if (!scrollResult.ok) {
+    sendStatusUpdate({ type: "export-status", phase: "done" });
     return { ok: false, error: scrollResult.error };
   }
 
+  sendStatusUpdate({
+    type: "export-status",
+    phase: "extracting",
+    detail: "Collecting messages…",
+  });
   const messages = extractMessages(root);
   if (messages.length === 0) {
+    sendStatusUpdate({ type: "export-status", phase: "done" });
     return { ok: false, error: "No messages were found in the current chat." };
   }
 
+  sendStatusUpdate({ type: "export-status", phase: "done" });
   return { ok: true, payload: { chatId, sourceUrl: window.location.href, messages } };
 };
 

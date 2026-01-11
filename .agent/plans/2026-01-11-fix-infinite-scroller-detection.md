@@ -18,7 +18,7 @@ Users should also understand when the exporter is actively scrolling or checking
 - [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
 - [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
 - [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
-- [ ] Add export status messaging for scroll checks in popup UI and content script
+- [x] (2026-01-11 12:40JST) Add export status messaging for scroll checks in popup UI and content script
 
 ## Surprises & Discoveries
 
@@ -418,6 +418,8 @@ Additional observable behavior for status messaging:
 2. Confirm the status text changes to indicate scrolling/checking while waiting.
 3. Confirm the status text returns to "Collecting messages…" when extraction begins.
 
+Current status (2026-01-11 12:40JST): Status messaging not yet manually verified in the popup UI.
+
 ### Step 7: Add and Verify Popup Status Messaging
 
 Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
@@ -434,6 +436,11 @@ Plan maintenance transcript (working directory: `/Users/sotayamashita/Projects/a
     $ rg -n "Plan of Work|Change 3|Observable Behavior|Interfaces and Dependencies" .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
     $ sed -n '111,280p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
     $ sed -n '530,590p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
+
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ rg -n "export-current-chat|onMessage" entrypoints/content.ts entrypoints/popup/App.tsx src/export/messages.ts
+    $ rg -n "ExportStatusUpdate|export-status" src/export/messages.ts entrypoints/content.ts entrypoints/popup/App.tsx
 
 ## Idempotence and Recovery
 
@@ -569,3 +576,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:29JST: Clarified test status wording to avoid conflicting statuses.
 2026-01-11 12:30JST: Added build transcript and marked manual verification as partially complete (build done, browser export pending).
 2026-01-11 12:35JST: Added a scroll-check status messaging plan, updated progress, surprises, decisions, concrete steps, and interfaces to include the new popup feedback work.
+2026-01-11 12:40JST: Implemented scroll-check status messaging changes and documented the new transcripts and validation status.
