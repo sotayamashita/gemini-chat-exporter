@@ -10,11 +10,11 @@ Users cannot export complete chat histories from long Gemini conversations. Curr
 
 ## Progress
 
-- [x] (2026-01-11 12:26JST) 開始
+- [x] (2026-01-11 12:26JST) Started implementation
 - [x] (2026-01-11 12:27JST) Update `findScrollContainer()` function to prioritize `infinite-scroller.chat-history` element
 - [x] (2026-01-11 12:27JST) Increase `SCROLL_DELAY` constant from 120ms to 300ms
 - [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
-- [ ] Run existing unit tests to verify no regressions
+- [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
 - [ ] Manual verification with long chat export
 
 ## Surprises & Discoveries
@@ -304,6 +304,16 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
 
 Expected output: All existing tests pass. The DOM structure changes do not affect the extraction logic tests in `src/export/extract.test.ts`.
 
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ git commit -m "fix: prioritize infinite scroller detection"
+    [STARTED] Running tasks for staged files...
+    [STARTED] pnpm compile
+    [COMPLETED] pnpm compile
+    [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [fix/infinite-scroller-detection 4382468] fix: prioritize infinite scroller detection
+
 ### Step 6: Manual Verification
 
 Build and load the extension, then export a known long chat:
@@ -343,7 +353,9 @@ Run existing unit tests:
 
 Expected: All tests pass. No regressions in message extraction logic.
 
-Current status (2026-01-11 12:27JST): Tests not run yet.
+Prior status (2026-01-11 12:27JST): Tests not run yet.
+
+Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 
 ### Observable Behavior
 
@@ -477,3 +489,5 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 ## Plan Update Notes
 
 2026-01-11 12:27JST: Marked implementation tasks for scroll container detection, SCROLL_DELAY change, and documentation updates as complete; added concrete command transcripts and current validation status after applying the code and doc edits.
+2026-01-11 12:29JST: Marked tests as complete after lint-staged ran `pnpm compile` and `vitest run`; added commit/test transcript and updated validation status.
+2026-01-11 12:29JST: Clarified test status wording to avoid conflicting statuses.
