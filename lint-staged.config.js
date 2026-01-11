@@ -2,5 +2,12 @@
  * @type {import('lint-staged').Configuration}
  */
 export default {
-  "*.{ts,tsx,js,jsx,json}": ["oxfmt", "oxlint --fix", () => "pnpm compile", () => "pnpm build"],
+  // https://github.com/secretlint/secretlint
+  "*.{ts,tsx,js,jsx,json}": [
+    "oxfmt",
+    "oxlint --fix",
+    "secretlint",
+    () => "pnpm compile",
+    () => "pnpm build",
+  ],
 };
