@@ -1,1 +1,1 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sotayamashita/gemini-chat-exporter)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sotayamashita/gemini-chat-exporter) [![CI](https://github.com/sotayamashita/gemini-chat-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/sotayamashita/gemini-chat-exporter/actions/workflows/ci.yml)
