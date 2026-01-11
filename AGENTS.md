@@ -34,6 +34,8 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 - Use the existing directory and file naming patterns (e.g., `entrypoints/popup/App.tsx`).
 - Lint with `pnpm lint` (oxlint) and auto-fix with `pnpm lint:fix`.
 - Format with `pnpm format` (oxfmt) and verify with `pnpm format:check`.
+- When updating Gemini DOM extraction logic, keep `docs/gemini-structure-guide.md` in sync.
+- Do not bypass git hooks (e.g., `HUSKY=0` or `--no-verify` is prohibited).
 
 ## Testing Guidelines
 
