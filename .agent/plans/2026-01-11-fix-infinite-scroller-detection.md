@@ -15,7 +15,7 @@ Users cannot export complete chat histories from long Gemini conversations. Curr
 - [x] (2026-01-11 12:27JST) Increase `SCROLL_DELAY` constant from 120ms to 300ms
 - [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
 - [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
-- [ ] Manual verification with long chat export
+- [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
 
 ## Surprises & Discoveries
 
@@ -324,6 +324,14 @@ Build and load the extension, then export a known long chat:
     # Click export button
     # Verify exported file contains 72 messages (36 user + 36 Gemini)
 
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ pnpm build
+    WXT 0.20.13
+    ℹ Building chrome-mv3 for production with Vite 7.3.1
+    ✔ Built extension in 539 ms
+    ✔ Finished in 558 ms
+
 ## Validation and Acceptance
 
 After implementation, the extension must export complete chat histories from long conversations.
@@ -366,6 +374,8 @@ Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm comp
 5. Verify exported file contains all messages from the conversation
 
 Current status (2026-01-11 12:27JST): Manual verification not run yet.
+
+Updated status (2026-01-11 12:30JST): Build completed; manual browser export and message count verification still pending.
 
 ## Idempotence and Recovery
 
@@ -491,3 +501,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:27JST: Marked implementation tasks for scroll container detection, SCROLL_DELAY change, and documentation updates as complete; added concrete command transcripts and current validation status after applying the code and doc edits.
 2026-01-11 12:29JST: Marked tests as complete after lint-staged ran `pnpm compile` and `vitest run`; added commit/test transcript and updated validation status.
 2026-01-11 12:29JST: Clarified test status wording to avoid conflicting statuses.
+2026-01-11 12:30JST: Added build transcript and marked manual verification as partially complete (build done, browser export pending).
