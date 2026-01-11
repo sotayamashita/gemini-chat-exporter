@@ -439,6 +439,7 @@ Prior status (2026-01-11 12:27JST): Tests not run yet.
 Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 Updated status (2026-01-11 12:41JST): Tests executed again via lint-staged during `feat: show scroll status in popup` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 Updated status (2026-01-11 12:45JST): Tests executed again via lint-staged during `feat: log scroll progress for exports` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
+Updated status (2026-01-11 12:50JST): Tests executed again via lint-staged during `feat: compute scroll iterations dynamically` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 
 ### Observable Behavior
 
@@ -536,6 +537,13 @@ Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` ba
 Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
 
     $ rg -n "computedMaxIterations|max-iterations" entrypoints/content.ts
+    $ git commit -m "feat: compute scroll iterations dynamically"
+    [STARTED] Running tasks for staged files...
+    [STARTED] pnpm compile
+    [COMPLETED] pnpm compile
+    [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [fix/infinite-scroller-detection c733acd] feat: compute scroll iterations dynamically
 
 ## Idempotence and Recovery
 
@@ -692,3 +700,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:45JST: Added scroll progress logging to `entrypoints/content.ts`, expanded the plan with diagnostic steps, and marked logging work complete.
 2026-01-11 12:45JST: Recorded lint-staged test rerun during scroll logging commit and added the commit transcript.
 2026-01-11 12:50JST: Added Playwright MCP evidence, decided on dynamic max iterations, and implemented the computed iteration cap.
+2026-01-11 12:50JST: Recorded lint-staged test rerun and commit transcript for dynamic iteration cap change.
