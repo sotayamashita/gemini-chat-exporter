@@ -8,6 +8,8 @@ This document must be maintained in accordance with `.agent/PLANS.md` at the rep
 
 Users cannot export complete chat histories from long Gemini conversations. Currently, only 10-20 messages (14-28%) are captured instead of the full conversation. After this change, users will be able to export 100% of messages from any length of Gemini chat. This can be verified by exporting a known long chat (such as chat ID `cbb342fdc6010a5e` with 72 messages) and confirming all messages appear in the exported file.
 
+Users should also understand when the exporter is actively scrolling or checking for older messages, especially in chats that do not require scrolling. The popup UI will surface a clear status message during scroll checks so users do not assume the export is stuck.
+
 ## Progress
 
 - [x] (2026-01-11 12:26JST) Started implementation
@@ -16,6 +18,7 @@ Users cannot export complete chat histories from long Gemini conversations. Curr
 - [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
 - [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
 - [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
+- [ ] Add export status messaging for scroll checks in popup UI and content script
 
 ## Surprises & Discoveries
 
@@ -52,6 +55,20 @@ Evidence from Playwright MCP observation:
 
 This means message extraction must occur immediately after scroll completes, before the auto scroll-back triggers.
 
+### User Feedback Gap During Scroll Checks
+
+Even when no scroll is needed, `autoScrollToTop()` still waits for `SCROLL_DELAY` and `SCROLL_SETTLE_DELAY`, which can appear as a stall to users. The popup currently shows a generic "Collecting messages…" status without indicating that a scroll check is running.
+
+Evidence from current implementation (`entrypoints/content.ts`):
+
+    const nextTop = Math.max(0, container.scrollTop - SCROLL_STEP);
+    container.scrollTop = nextTop;
+    await wait(SCROLL_DELAY);
+    if (container.scrollTop === 0) {
+      await wait(SCROLL_SETTLE_DELAY);
+      return { ok: true };
+    }
+
 ## Decision Log
 
 - Decision: Prioritize `infinite-scroller.chat-history` over `div.chat-history-scroll-container` in scroll container detection
@@ -64,6 +81,10 @@ This means message extraction must occur immediately after scroll completes, bef
 
 - Decision: Add explicit scrollability check (`scrollHeight > clientHeight`) in container detection
   Rationale: Prevents selecting non-scrollable elements even if they match known selectors. Makes the code more robust against future DOM structure changes.
+  Date: 2026-01-11
+
+- Decision: Surface a dedicated "scroll check" status message in the popup UI during export
+  Rationale: Users cannot tell why exports are delayed when scrolling is not required. Explicit status updates reduce confusion and make the export feel responsive even during unavoidable waits.
   Date: 2026-01-11
 
 ## Outcomes & Retrospective
@@ -89,7 +110,7 @@ The message extraction logic is in `src/export/extract.ts` and operates synchron
 
 ## Plan of Work
 
-The fix requires two changes in `entrypoints/content.ts` and documentation updates in `docs/gemini-structure-guide.md`.
+The fix requires two changes in `entrypoints/content.ts` and documentation updates in `docs/gemini-structure-guide.md`. It also adds user-visible status messaging for scroll checks so the popup communicates that work is in progress.
 
 ### Change 1: Update findScrollContainer() Priority Order
 
@@ -217,6 +238,20 @@ Also update the "Mapping to Existing Implementation" section by adding after `- 
       - Update priority order when scroll container changes.
       - Always verify `scrollHeight > clientHeight` to confirm scrollability.
       - `infinite-scroller.chat-history` is the primary container as of 2026-01-11.
+
+### Change 4: Add Scroll-Check Status Messaging
+
+Introduce a lightweight status update message so the popup can display "Checking scroll history…" or "Scrolling chat history…" while the content script is running `autoScrollToTop()`. This requires:
+
+- Adding a new message type in `src/export/messages.ts`:
+  - `ExportStatusUpdate` with `{ type: "export-status"; phase: "scrolling" | "extracting" | "done"; detail?: string }`
+  - Extend `ExtensionMessage` to include this status update type.
+- In `entrypoints/content.ts`, send status updates:
+  - Just before calling `autoScrollToTop()`, send `{ type: "export-status", phase: "scrolling", detail: "Checking for older messages…" }`.
+  - Immediately after scroll completes and before extraction, send `{ type: "export-status", phase: "extracting", detail: "Collecting messages…" }`.
+  - After extraction completes (success or error), send `{ type: "export-status", phase: "done" }` to allow the popup to stop showing a scrolling-specific status if needed.
+- In `entrypoints/popup/App.tsx`, add a `browser.runtime.onMessage` listener (registered with `useEffect`) to receive `export-status` messages and update the popup status message when `status.state === "working"`. Keep existing error/success handling unchanged.
+- Update `entrypoints/popup/App.tsx` initial working status to something neutral ("Preparing export…") so the scrolling status can override it.
 
 ## Concrete Steps
 
@@ -377,6 +412,29 @@ Current status (2026-01-11 12:27JST): Manual verification not run yet.
 
 Updated status (2026-01-11 12:30JST): Build completed; manual browser export and message count verification still pending.
 
+Additional observable behavior for status messaging:
+
+1. Start export in the popup.
+2. Confirm the status text changes to indicate scrolling/checking while waiting.
+3. Confirm the status text returns to "Collecting messages…" when extraction begins.
+
+### Step 7: Add and Verify Popup Status Messaging
+
+Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
+
+    # Start export on a short chat (no scrolling required)
+    # Observe popup status transitions:
+    #   "Preparing export…" → "Checking for older messages…" → "Collecting messages…" → "Exported N messages ..."
+    # Start export on a long chat (scrolling required)
+    # Observe popup status transitions:
+    #   "Preparing export…" → "Scrolling chat history…" (or "Checking for older messages…") → "Collecting messages…" → success/error
+
+Plan maintenance transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ rg -n "Plan of Work|Change 3|Observable Behavior|Interfaces and Dependencies" .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
+    $ sed -n '111,280p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
+    $ sed -n '530,590p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
+
 ## Idempotence and Recovery
 
 All code changes are additive and maintain backward compatibility. The legacy scroll container selector remains as a fallback, so the change is safe even if Gemini's DOM structure varies across different chat pages.
@@ -479,6 +537,14 @@ Medium Risk:
 
 No new dependencies are introduced. The change modifies existing internal functions.
 
+The `ExportStatusUpdate` message is added to `src/export/messages.ts`:
+
+    export type ExportStatusUpdate = {
+      type: "export-status";
+      phase: "scrolling" | "extracting" | "done";
+      detail?: string;
+    };
+
 The `ScrollContainer` type is already defined in the codebase and represents an HTML element with scroll capabilities. It must have the properties `scrollTop`, `scrollHeight`, and `clientHeight`.
 
 The `findScrollContainer()` function signature remains unchanged:
@@ -502,3 +568,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:29JST: Marked tests as complete after lint-staged ran `pnpm compile` and `vitest run`; added commit/test transcript and updated validation status.
 2026-01-11 12:29JST: Clarified test status wording to avoid conflicting statuses.
 2026-01-11 12:30JST: Added build transcript and marked manual verification as partially complete (build done, browser export pending).
+2026-01-11 12:35JST: Added a scroll-check status messaging plan, updated progress, surprises, decisions, concrete steps, and interfaces to include the new popup feedback work.
