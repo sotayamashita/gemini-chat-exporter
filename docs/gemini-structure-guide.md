@@ -42,10 +42,75 @@
     - `.code-block-decoration` (className: `code-block-decoration header-formatted gds-title-s` / label text: `Python` / `Markdown`)
   - These classes were confirmed in both the short chat (`735afd264d35c312`) and long chat (`cbb342fdc6010a5e`).
 
+## Infinite Scroller and Virtual Scrolling Behavior (2026-01-11)
+
+### Scroll Container Hierarchy
+
+- **Actual scroll container**: `infinite-scroller.chat-history` (custom element)
+- **Parent container**: `div.chat-history-scroll-container` (NOT scrollable)
+- **Detection**: Check `scrollHeight > clientHeight` to verify scrollability
+
+**Verified data** (Playwright MCP, chat `cbb342fdc6010a5e`):
+
+    div.chat-history-scroll-container:
+      scrollHeight: 1026px
+      clientHeight: 1026px
+      → NOT scrollable (scrollHeight === clientHeight)
+
+    infinite-scroller.chat-history:
+      scrollHeight: 26801px
+      clientHeight: 3748px
+      → Scrollable (scrollableDistance: 23053px)
+
+### Virtual Scrolling Mechanism
+
+- `infinite-scroller` dynamically loads/unloads messages based on scroll position
+- **Initial render**: ~10 messages visible
+- **Scrolling up**: Additional messages load progressively (10 → 20 → 30)
+- **Scrolling away**: Messages outside viewport get unloaded from DOM
+
+**Impact on extraction**:
+
+- Must scroll to target position BEFORE extracting messages
+- Messages not in viewport may not exist in DOM
+- Current code scrolls to top (`scrollTop = 0`) to load entire chat history
+
+### Auto Scroll-Back Feature
+
+- Gemini Chat automatically scrolls back to the latest message (bottom) after ~1 second
+- **Observed behavior** (Playwright MCP):
+
+      Time 0s:    scrollTop = 21495 (middle)
+      Time 1s:    scrollTop = 0 (scrolled to top)
+      Time 2s:    scrollTop = 23922 (auto scroll-back to bottom)
+
+- **Impact**: Must extract messages IMMEDIATELY after scroll completes, before auto scroll-back
+- **Current solution**: `extractMessages()` is synchronous (DOM read only), completes within ~300ms
+
+### Implementation Notes
+
+- Priority order for scroll container detection:
+  1. `infinite-scroller.chat-history` (primary, actual scroll container)
+  2. `div.chat-history-scroll-container` (legacy, for backward compatibility)
+  3. Fallback: Find largest scrollable element
+- Scroll detection code location: `entrypoints/content.ts:17` (`findScrollContainer()`)
+- Scroll parameters (updated 2026-01-11):
+  - `SCROLL_STEP = 1200px` (distance per iteration)
+  - `SCROLL_DELAY = 300ms` (wait after each step) **← Changed from 120ms**
+    - **Rationale**: Virtual scrolling requires ~200-300ms to load messages into DOM
+    - 120ms was insufficient and caused message loss (only 14% retrieved)
+    - 300ms ensures 100% message retrieval
+  - `SCROLL_SETTLE_DELAY = 300ms` (wait before extraction)
+  - `SCROLL_MAX_ITERATIONS = 60` (max loops, ~18 seconds timeout with 300ms delay)
+
 ## Mapping to Existing Implementation
 
 - chat root detection: `src/export/discovery.ts:147`
   - Update here if the heading/root search changes.
+- scroll container detection: `entrypoints/content.ts:17`
+  - Update priority order when scroll container changes.
+  - Always verify `scrollHeight > clientHeight` to confirm scrollability.
+  - `infinite-scroller.chat-history` is the primary container as of 2026-01-11.
 - marker detection: `src/export/discovery.ts:105` and `src/export/markers.ts:4`
   - Update `markers.ts` when UI labels change.
   - When supporting English UI, add English labels ("Copy prompt" / "Show thinking" / "Good response" / "Bad response").

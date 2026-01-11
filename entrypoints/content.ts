@@ -8,18 +8,21 @@ type ScrollResult = { ok: true } | { ok: false; error: string };
 type ScrollContainer = HTMLElement;
 
 const SCROLL_STEP = 1200;
-const SCROLL_DELAY = 120;
+const SCROLL_DELAY = 300;
 const SCROLL_SETTLE_DELAY = 300;
 const SCROLL_MAX_ITERATIONS = 60;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const findScrollContainer = (root: Element): ScrollContainer | null => {
-  const preferred =
-    root.querySelector<HTMLElement>("div.chat-history-scroll-container") ??
-    root.querySelector<HTMLElement>("infinite-scroller.chat-history");
-  if (preferred) {
-    return preferred;
+  const infiniteScroller = root.querySelector<HTMLElement>("infinite-scroller.chat-history");
+  if (infiniteScroller && infiniteScroller.scrollHeight > infiniteScroller.clientHeight) {
+    return infiniteScroller;
+  }
+
+  const legacyContainer = root.querySelector<HTMLElement>("div.chat-history-scroll-container");
+  if (legacyContainer && legacyContainer.scrollHeight > legacyContainer.clientHeight) {
+    return legacyContainer;
   }
 
   const candidates = Array.from(root.querySelectorAll<HTMLElement>("*"));

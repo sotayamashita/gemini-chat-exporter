@@ -10,9 +10,10 @@ Users cannot export complete chat histories from long Gemini conversations. Curr
 
 ## Progress
 
-- [ ] Update `findScrollContainer()` function to prioritize `infinite-scroller.chat-history` element
-- [ ] Increase `SCROLL_DELAY` constant from 120ms to 300ms
-- [ ] Update `docs/gemini-structure-guide.md` with infinite scroller documentation
+- [x] (2026-01-11 12:26JST) 開始
+- [x] (2026-01-11 12:27JST) Update `findScrollContainer()` function to prioritize `infinite-scroller.chat-history` element
+- [x] (2026-01-11 12:27JST) Increase `SCROLL_DELAY` constant from 120ms to 300ms
+- [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
 - [ ] Run existing unit tests to verify no regressions
 - [ ] Manual verification with long chat export
 
@@ -228,6 +229,23 @@ All commands should be run from the repository root directory `/Users/sotayamash
 
 Observe lines 10-13 (scroll constants) and lines 17-37 (findScrollContainer function).
 
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ cat entrypoints/content.ts
+    const SCROLL_STEP = 1200;
+    const SCROLL_DELAY = 120;
+    const SCROLL_SETTLE_DELAY = 300;
+    const SCROLL_MAX_ITERATIONS = 60;
+    const findScrollContainer = (root: Element): ScrollContainer | null => {
+      const preferred =
+        root.querySelector<HTMLElement>("div.chat-history-scroll-container") ??
+        root.querySelector<HTMLElement>("infinite-scroller.chat-history");
+      if (preferred) {
+        return preferred;
+      }
+      ...
+    };
+
 ### Step 2: Modify findScrollContainer() Function
 
 Edit `entrypoints/content.ts` lines 17-37 to implement the new priority order with scrollability checks as described in "Plan of Work".
@@ -252,6 +270,33 @@ Edit `docs/gemini-structure-guide.md` to add the new section "Infinite Scroller 
 - Implementation Notes
 
 Also update the "Mapping to Existing Implementation" section to reference scroll container detection at `entrypoints/content.ts:17`.
+
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ sed -n '1,200p' entrypoints/content.ts
+    const SCROLL_STEP = 1200;
+    const SCROLL_DELAY = 300;
+    const SCROLL_SETTLE_DELAY = 300;
+    const SCROLL_MAX_ITERATIONS = 60;
+    const findScrollContainer = (root: Element): ScrollContainer | null => {
+      const infiniteScroller = root.querySelector<HTMLElement>("infinite-scroller.chat-history");
+      if (infiniteScroller && infiniteScroller.scrollHeight > infiniteScroller.clientHeight) {
+        return infiniteScroller;
+      }
+      const legacyContainer = root.querySelector<HTMLElement>("div.chat-history-scroll-container");
+      if (legacyContainer && legacyContainer.scrollHeight > legacyContainer.clientHeight) {
+        return legacyContainer;
+      }
+      ...
+    };
+
+    $ sed -n '1,200p' docs/gemini-structure-guide.md
+    ## Infinite Scroller and Virtual Scrolling Behavior (2026-01-11)
+    ...
+    - scroll container detection: `entrypoints/content.ts:17`
+      - Update priority order when scroll container changes.
+      - Always verify `scrollHeight > clientHeight` to confirm scrollability.
+      - `infinite-scroller.chat-history` is the primary container as of 2026-01-11.
 
 ### Step 5: Run Tests
 
@@ -298,6 +343,8 @@ Run existing unit tests:
 
 Expected: All tests pass. No regressions in message extraction logic.
 
+Current status (2026-01-11 12:27JST): Tests not run yet.
+
 ### Observable Behavior
 
 1. Open browser DevTools console
@@ -305,6 +352,8 @@ Expected: All tests pass. No regressions in message extraction logic.
 3. Trigger export
 4. Observe console logs showing scroll progress reaching `scrollTop = 0`
 5. Verify exported file contains all messages from the conversation
+
+Current status (2026-01-11 12:27JST): Manual verification not run yet.
 
 ## Idempotence and Recovery
 
@@ -424,3 +473,7 @@ The function now implements a three-tier priority system:
 3. Fallback to generic search for largest scrollable element
 
 Each tier validates that `scrollHeight > clientHeight` before accepting the container.
+
+## Plan Update Notes
+
+2026-01-11 12:27JST: Marked implementation tasks for scroll container detection, SCROLL_DELAY change, and documentation updates as complete; added concrete command transcripts and current validation status after applying the code and doc edits.
