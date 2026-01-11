@@ -112,27 +112,17 @@ const isWithin = (element: Element, container: Element) =>
   element === container || container.contains(element);
 
 /**
- * Finds the closest ancestor matching a predicate, bounded by the root.
- */
-const findClosestAncestor = (
-  element: Element,
-  predicate: (node: Element) => boolean,
-  root: Element,
-): Element | null => {
-  let current: Element | null = element;
-  while (current && current !== root) {
-    if (predicate(current)) {
-      return current;
-    }
-    current = current.parentElement;
-  }
-  return null;
-};
-
-/**
  * Finds a language label in a code block container.
  */
 const findLanguageLabel = (container: Element) => {
+  const codeBlock = container.classList.contains("code-block")
+    ? container
+    : container.closest(".code-block");
+  const decorated = codeBlock?.querySelector<HTMLElement>(".code-block-decoration");
+  const decoratedText = normalizeText(decorated?.textContent);
+  if (decoratedText && /^[A-Za-z0-9+#_.-]{1,20}$/.test(decoratedText)) {
+    return decoratedText.toLowerCase();
+  }
   const candidates = Array.from(
     container.querySelectorAll<HTMLElement>("span, div, label, button"),
   );
@@ -161,19 +151,11 @@ const collectCodeBlocks = (block: Element) => {
   for (const code of codeElements) {
     const codeText = code.textContent ?? "";
     const isBlock = codeText.includes("\n") || Boolean(code.closest("pre"));
-    const copyAncestor = findClosestAncestor(
-      code,
-      (node) =>
-        Array.from(node.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
-          normalizeText(button.textContent).includes("コードをコピー"),
-        ),
-      block,
-    );
-    if (!isBlock && !copyAncestor) {
+    if (!isBlock) {
       continue;
     }
 
-    const container = copyAncestor ?? code.closest("pre") ?? code;
+    const container = code.closest(".code-block") ?? code.closest("pre") ?? code;
     if (containers.has(container)) {
       continue;
     }
