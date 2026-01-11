@@ -1,5 +1,9 @@
-import { useState } from "react";
-import type { DownloadExportResponse, ExportCurrentChatResponse } from "@/src/export/messages";
+import { useEffect, useState } from "react";
+import type {
+  DownloadExportResponse,
+  ExportCurrentChatResponse,
+  ExportStatusUpdate,
+} from "@/src/export/messages";
 import { formatExportMarkdown } from "@/src/export/serialize";
 import { getLocalIsoTimestamp } from "@/src/export/time";
 import { getChatIdFromUrl } from "@/src/export/url";
@@ -44,12 +48,37 @@ function App() {
   const [status, setStatus] = useState<Status>(idleStatus);
   const [debugEntries, setDebugEntries] = useState<DebugEntry[]>([]);
 
+  useEffect(() => {
+    const handleStatusUpdate = (message: ExportStatusUpdate) => {
+      if (message?.type !== "export-status") {
+        return;
+      }
+      setStatus((current) => {
+        if (current.state !== "working") {
+          return current;
+        }
+        if (message.phase === "done") {
+          return current;
+        }
+        return {
+          state: "working",
+          message: message.detail ?? "Collecting messages…",
+        };
+      });
+    };
+
+    browser.runtime.onMessage.addListener(handleStatusUpdate);
+    return () => {
+      browser.runtime.onMessage.removeListener(handleStatusUpdate);
+    };
+  }, []);
+
   const setDebug = (entries: DebugEntry[] | ((prev: DebugEntry[]) => DebugEntry[])) => {
     setDebugEntries(entries);
   };
 
   const handleExport = async () => {
-    setStatus({ state: "working", message: "Collecting messages…" });
+    setStatus({ state: "working", message: "Preparing export…" });
     setDebug([]);
 
     try {

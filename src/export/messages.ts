@@ -5,6 +5,14 @@ import type { ExportPayload } from "@/src/export/types";
  */
 export type ExportCurrentChatRequest = { type: "export-current-chat" };
 /**
+ * Status updates emitted while exporting a chat.
+ */
+export type ExportStatusUpdate = {
+  type: "export-status";
+  phase: "scrolling" | "extracting" | "done";
+  detail?: string;
+};
+/**
  * Response for the chat export request.
  */
 export type ExportCurrentChatResponse =
@@ -26,4 +34,7 @@ export type DownloadExportResponse = { ok: true } | { ok: false; error: string }
 /**
  * Union of extension message request types.
  */
-export type ExtensionMessage = ExportCurrentChatRequest | DownloadExportRequest;
+export type ExtensionMessage =
+  | ExportCurrentChatRequest
+  | ExportStatusUpdate
+  | DownloadExportRequest;
