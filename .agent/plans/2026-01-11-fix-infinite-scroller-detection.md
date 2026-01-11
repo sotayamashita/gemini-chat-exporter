@@ -399,6 +399,7 @@ Expected: All tests pass. No regressions in message extraction logic.
 Prior status (2026-01-11 12:27JST): Tests not run yet.
 
 Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
+Updated status (2026-01-11 12:41JST): Tests executed again via lint-staged during `feat: show scroll status in popup` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 
 ### Observable Behavior
 
@@ -441,6 +442,13 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
 
     $ rg -n "export-current-chat|onMessage" entrypoints/content.ts entrypoints/popup/App.tsx src/export/messages.ts
     $ rg -n "ExportStatusUpdate|export-status" src/export/messages.ts entrypoints/content.ts entrypoints/popup/App.tsx
+    $ git commit -m "feat: show scroll status in popup"
+    [STARTED] Running tasks for staged files...
+    [STARTED] pnpm compile
+    [COMPLETED] pnpm compile
+    [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [fix/infinite-scroller-detection 404f507] feat: show scroll status in popup
 
 ## Idempotence and Recovery
 
@@ -454,7 +462,7 @@ If the implementation is interrupted:
 
 To rollback if needed:
 
-    git checkout main -- entrypoints/content.ts docs/gemini-structure-guide.md
+    git checkout main -- entrypoints/content.ts docs/gemini-structure-guide.md entrypoints/popup/App.tsx src/export/messages.ts
 
 ## Artifacts and Notes
 
@@ -577,3 +585,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:30JST: Added build transcript and marked manual verification as partially complete (build done, browser export pending).
 2026-01-11 12:35JST: Added a scroll-check status messaging plan, updated progress, surprises, decisions, concrete steps, and interfaces to include the new popup feedback work.
 2026-01-11 12:40JST: Implemented scroll-check status messaging changes and documented the new transcripts and validation status.
+2026-01-11 12:41JST: Recorded lint-staged test rerun during status messaging commit and added the commit transcript to concrete steps.
