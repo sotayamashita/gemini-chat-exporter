@@ -21,8 +21,8 @@ describe("export extraction", () => {
               <li>Fast</li>
               <li>Helpful</li>
             </ul>
-            <div class="code">
-              <span>Python</span>
+            <div class="code-block">
+              <span class="code-block-decoration">Python</span>
               <button>コードをコピー</button>
               <pre><code>print("hi")\n</code></pre>
             </div>
@@ -291,13 +291,13 @@ describe("export extraction", () => {
             <section class="message gemini">
               <button aria-label="思考プロセスを表示"></button>
               <p>First code:</p>
-              <div class="code">
-                <span>Python</span>
+              <div class="code-block">
+                <span class="code-block-decoration">Python</span>
                 <pre><code>print("hello")</code></pre>
               </div>
               <p>Second code:</p>
-              <div class="code">
-                <span>JavaScript</span>
+              <div class="code-block">
+                <span class="code-block-decoration">JavaScript</span>
                 <pre><code>console.log("world")</code></pre>
               </div>
             </section>
@@ -359,8 +359,8 @@ describe("export extraction", () => {
                 <li>Item 1</li>
                 <li>Item 2</li>
               </ul>
-              <div class="code">
-                <span>Python</span>
+              <div class="code-block">
+                <span class="code-block-decoration">Python</span>
                 <pre><code>print("test")</code></pre>
               </div>
               <table>

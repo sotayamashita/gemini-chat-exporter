@@ -177,7 +177,11 @@ export function findMessageBlocks(root: Element): Element[] {
 
   const blocks = Array.from(blockSet);
   blocks.sort(compareDocumentOrder);
-  return blocks;
+  // Prefer the most specific blocks when markers point to nested containers.
+  const filtered = blocks.filter(
+    (block) => !blocks.some((other) => block !== other && block.contains(other)),
+  );
+  return filtered;
 }
 
 /**

@@ -21,6 +21,7 @@
 - Common:
   - The chat root tends to be near the ancestor of the heading "Conversation with Gemini / Gemini との会話".
   - Multiple Gemini markers can exist within a single reply and may map to different ancestors.
+  - When both `.response-content` and `.response-container` exist for the same reply, prefer the inner `.response-content` to avoid duplication.
   - Code blocks have a language label within `.code-block`, and the label can be a sibling of `pre > code`.
   - Class names are unstable; prefer text and aria-label.
 - Japanese UI:
@@ -50,7 +51,7 @@
   - When supporting English UI, add English labels ("Copy prompt" / "Show thinking" / "Good response" / "Bad response").
   - Adjust `buttonText()` if you want to change the priority of aria-label vs textContent.
 - message block collection: `src/export/discovery.ts:167`
-  - If double extraction happens, revisit `findClosestBlock()` and the dedup strategy.
+  - If double extraction happens, ensure nested blocks are deduped and the most specific block is kept.
 - mixed block splitting: `src/export/discovery.ts:186`
   - Update when a single block mixes user/gemini after structural changes.
 - role detection: `src/export/extract.ts:399`
@@ -60,7 +61,7 @@
 - User serialization: `src/export/extract.ts:378`
   - Update `heading` extraction rules if heading structure changes.
 - code block collection: `src/export/extract.ts:157`
-  - Update container detection if code block containers change.
+  - Code blocks are anchored by `.code-block` (preferred) or `pre` and must not depend on UI text.
 - language label extraction: `src/export/extract.ts:135`
   - Update if language label position changes.
 - markdown generation: `src/export/serialize.ts:23`
@@ -292,4 +293,4 @@ await page.evaluate(() => {
 - Marker fragility: UI label changes can break role detection.
 - Regenerate replies: UI like 「やり直す」 can change marker ancestor relationships.
 - Large tables: Wide tables can cause parsing failures (fallback with column limits).
-- Inline code misclassification: Short `code` can be treated as a code block if copy UI exists in ancestors.
+- Inline code misclassification: Short inline `code` should not be treated as a block unless inside `pre`/`.code-block`.
