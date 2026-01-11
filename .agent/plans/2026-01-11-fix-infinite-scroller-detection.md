@@ -17,7 +17,7 @@ Users should also understand when the exporter is actively scrolling or checking
 - [x] (2026-01-11 12:27JST) Increase `SCROLL_DELAY` constant from 120ms to 300ms
 - [x] (2026-01-11 12:27JST) Update `docs/gemini-structure-guide.md` with infinite scroller documentation
 - [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
-- [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
+- [x] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
 - [x] (2026-01-11 12:40JST) Add export status messaging for scroll checks in popup UI and content script
 - [x] (2026-01-11 12:45JST) Add detailed scroll progress logging for diagnostics
 - [x] (2026-01-11 12:50JST) Adjust scroll iteration limit based on starting scroll position
