@@ -21,6 +21,7 @@ Users should also understand when the exporter is actively scrolling or checking
 - [x] (2026-01-11 12:40JST) Add export status messaging for scroll checks in popup UI and content script
 - [x] (2026-01-11 12:45JST) Add detailed scroll progress logging for diagnostics
 - [x] (2026-01-11 12:50JST) Adjust scroll iteration limit based on starting scroll position
+- [x] (2026-01-11 12:57JST) Add scroll height stability check after reaching top
 
 ## Surprises & Discoveries
 
@@ -82,6 +83,14 @@ Evidence (Playwright MCP, 2026-01-11):
     after600ms: scrollTop=0, scrollHeight=26801, clientHeight=854
     after1800ms: scrollTop=0, scrollHeight=26801, clientHeight=854
 
+### Scroll Can Continue After Reaching Top (User Report)
+
+User logs show `scrollTop` reached 0 at iteration 18, but manual scrolling still revealed more history afterward, indicating that some chats may load additional content after the first "top reached" event.
+
+Evidence (user console logs, 2026-01-11):
+
+    reached-top: iteration=18, scrollTop=0, scrollHeight=26801, clientHeight=984
+
 ## Decision Log
 
 - Decision: Prioritize `infinite-scroller.chat-history` over `div.chat-history-scroll-container` in scroll container detection
@@ -102,6 +111,10 @@ Evidence (Playwright MCP, 2026-01-11):
 
 - Decision: Compute a dynamic maximum scroll iteration count based on initial `scrollTop`
   Rationale: Playwright MCP shows `scrollHeight` is stable after reaching the top, so the more likely failure mode for long chats is hitting the fixed `SCROLL_MAX_ITERATIONS` before reaching `scrollTop = 0`. Using a computed ceiling (derived from initial scroll distance) avoids premature failure without removing a safety cap.
+  Date: 2026-01-11
+
+- Decision: Require multiple stable scroll-height checks after reaching the top
+  Rationale: User logs show cases where `scrollTop` reached 0 but additional history was still available. Adding a short stability check for `scrollHeight` and requiring multiple stable passes avoids early exit while keeping the scroll loop bounded.
   Date: 2026-01-11
 
 ## Outcomes & Retrospective
@@ -291,6 +304,18 @@ Replace the fixed iteration cap inside `autoScrollToTop()` with a computed limit
 - Use `computedMaxIterations` in the loop condition and in diagnostic logs.
 - Keep `SCROLL_MAX_ITERATIONS` as a floor so small chats behave as before.
 
+### Change 7: Require Stable Scroll Height After Reaching Top
+
+Extend `autoScrollToTop()` so it only exits after the scroll height remains stable for multiple checks:
+
+- Add constants:
+  - `SCROLL_TOP_STABILITY_DELAY = 600` (ms between checks)
+  - `SCROLL_TOP_STABILITY_PASSES = 2` (number of consecutive stable checks required)
+- After `scrollTop === 0`, wait `SCROLL_SETTLE_DELAY`, then compare `scrollHeight` before/after `SCROLL_TOP_STABILITY_DELAY`.
+- If `scrollHeight` is unchanged, increment a `stableTopCount`. Only return success once it reaches `SCROLL_TOP_STABILITY_PASSES`.
+- If `scrollHeight` grows, reset `stableTopCount` and continue the loop.
+- Add `[gemini-export] scroll-stability` logs to capture `before`/`after` values for diagnostics.
+
 ## Concrete Steps
 
 All commands should be run from the repository root directory `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
@@ -471,6 +496,12 @@ Additional observable behavior for dynamic iteration limit:
 2. Confirm `[gemini-export] scroll` logs show `maxIterations` greater than 60 when starting `scrollTop` is large.
 3. Confirm scrolling continues until `scrollTop = 0` without hitting `max-iterations`.
 
+Additional observable behavior for scroll height stability:
+
+1. Start export in a chat where history continues to load after reaching the top.
+2. Confirm `[gemini-export] scroll-stability` logs appear and show `before/after` values.
+3. Confirm export only completes after two consecutive stable checks.
+
 ### Step 7: Add and Verify Popup Status Messaging
 
 Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
@@ -537,6 +568,14 @@ Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` ba
 Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
 
     $ rg -n "computedMaxIterations|max-iterations" entrypoints/content.ts
+
+### Step 10: Add Scroll Height Stability Check
+
+Edit `entrypoints/content.ts` to add `SCROLL_TOP_STABILITY_DELAY`, `SCROLL_TOP_STABILITY_PASSES`, and a `scroll-stability` log. Rebuild and verify that the exporter waits for the scroll height to stabilize before finishing.
+
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ rg -n "SCROLL_TOP_STABILITY|scroll-stability" entrypoints/content.ts
     $ git commit -m "feat: compute scroll iterations dynamically"
     [STARTED] Running tasks for staged files...
     [STARTED] pnpm compile
@@ -673,6 +712,21 @@ The scroll loop now uses a per-export `computedMaxIterations` value derived from
       Math.ceil(container.scrollTop / SCROLL_STEP) + 5,
     );
 
+The stability check adds these constants in `entrypoints/content.ts`:
+
+    const SCROLL_TOP_STABILITY_DELAY = 600;
+    const SCROLL_TOP_STABILITY_PASSES = 2;
+
+The `logScrollStability` helper is added for diagnostics:
+
+    const logScrollStability = (
+      label: string,
+      before: number,
+      after: number,
+      iteration?: number,
+      maxIterations?: number,
+    ) => void;
+
 The `findScrollContainer()` function signature remains unchanged:
 
     function findScrollContainer(root: Element): ScrollContainer | null
@@ -701,3 +755,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:45JST: Recorded lint-staged test rerun during scroll logging commit and added the commit transcript.
 2026-01-11 12:50JST: Added Playwright MCP evidence, decided on dynamic max iterations, and implemented the computed iteration cap.
 2026-01-11 12:50JST: Recorded lint-staged test rerun and commit transcript for dynamic iteration cap change.
+2026-01-11 12:57JST: Added scroll height stability checks, updated plan sections, and marked the stability work complete.

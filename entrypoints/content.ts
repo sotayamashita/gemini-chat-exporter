@@ -15,6 +15,8 @@ const SCROLL_STEP = 1200;
 const SCROLL_DELAY = 300;
 const SCROLL_SETTLE_DELAY = 300;
 const SCROLL_MAX_ITERATIONS = 60;
+const SCROLL_TOP_STABILITY_DELAY = 600;
+const SCROLL_TOP_STABILITY_PASSES = 2;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -60,6 +62,30 @@ const logScrollState = (
   console.log("[gemini-export] scroll", payload);
 };
 
+const logScrollStability = (
+  label: string,
+  before: number,
+  after: number,
+  iteration?: number,
+  maxIterations?: number,
+) => {
+  console.log("[gemini-export] scroll-stability", {
+    label,
+    iteration,
+    maxIterations,
+    before,
+    after,
+    stable: before === after,
+  });
+};
+
+const isScrollHeightStable = async (container: ScrollContainer) => {
+  const before = container.scrollHeight;
+  await wait(SCROLL_TOP_STABILITY_DELAY);
+  const after = container.scrollHeight;
+  return { stable: before === after, before, after };
+};
+
 const autoScrollToTop = async (
   container: ScrollContainer,
   onPhase: (update: ExportStatusUpdate) => void,
@@ -69,6 +95,7 @@ const autoScrollToTop = async (
     Math.ceil(container.scrollTop / SCROLL_STEP) + 5,
   );
   let previousTop = container.scrollTop;
+  let stableTopCount = 0;
   for (let iteration = 0; iteration < computedMaxIterations; iteration += 1) {
     if (iteration === 0) {
       onPhase({
@@ -87,7 +114,32 @@ const autoScrollToTop = async (
     if (container.scrollTop === 0) {
       await wait(SCROLL_SETTLE_DELAY);
       logScrollState("reached-top", container, iteration, computedMaxIterations);
-      return { ok: true };
+      const stability = await isScrollHeightStable(container);
+      if (stability.stable) {
+        stableTopCount += 1;
+        logScrollStability(
+          "top-stable",
+          stability.before,
+          stability.after,
+          iteration,
+          computedMaxIterations,
+        );
+        logScrollState("top-stable", container, iteration, computedMaxIterations);
+        if (stableTopCount >= SCROLL_TOP_STABILITY_PASSES) {
+          return { ok: true };
+        }
+      } else {
+        stableTopCount = 0;
+        logScrollStability(
+          "top-growing",
+          stability.before,
+          stability.after,
+          iteration,
+          computedMaxIterations,
+        );
+        logScrollState("top-growing", container, iteration, computedMaxIterations);
+      }
+      continue;
     }
 
     if (container.scrollTop === previousTop) {
