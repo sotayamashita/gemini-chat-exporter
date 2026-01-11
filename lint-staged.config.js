@@ -4,6 +4,7 @@
 export default {
   // All files: format and security check
   "*": [
+    // https://oxc.rs/docs/guide/usage/formatter/integration.html#pre-commit-hook
     "oxfmt --no-error-on-unmatched-pattern",
     // https://github.com/secretlint/secretlint
     "secretlint",
