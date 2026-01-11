@@ -119,7 +119,7 @@ Evidence (user console logs, 2026-01-11):
 
 ## Outcomes & Retrospective
 
-(To be filled upon completion)
+After reaching `scrollTop = 0`, some chats continued to load older messages, so "top reached" alone was not a reliable completion signal. The export now waits for the scroll height to stabilize for multiple passes before extracting, and logs scroll stability for diagnostics. This resolves the user-reported case where manual scrolling still revealed more history after export reported success.
 
 ## Context and Orientation
 
@@ -133,6 +133,10 @@ The scroll mechanism uses these constants defined at `entrypoints/content.ts:10-
 - `SCROLL_DELAY`: Wait time after each scroll step (currently 120ms)
 - `SCROLL_SETTLE_DELAY`: Wait time before message extraction (300ms)
 - `SCROLL_MAX_ITERATIONS`: Maximum scroll attempts (60 iterations)
+- `SCROLL_TOP_STABILITY_DELAY`: Wait time between scroll-height stability checks (600ms)
+- `SCROLL_TOP_STABILITY_PASSES`: Number of consecutive stable checks required (2)
+
+The scroll loop also computes a per-export `computedMaxIterations` based on `scrollTop` and `SCROLL_STEP` to avoid premature exit on long chats.
 
 Gemini uses a custom `infinite-scroller` web component that implements virtual scrolling. This component only renders messages near the current scroll position, loading more as the user scrolls and unloading those that move out of view.
 
@@ -503,6 +507,11 @@ Additional observable behavior for scroll height stability:
 2. Confirm `[gemini-export] scroll-stability` logs appear and show `before/after` values.
 3. Confirm export only completes after two consecutive stable checks.
 
+Resolution criteria:
+
+1. If `scrollTop = 0` but `scrollHeight` grows, the exporter continues scrolling until stability.
+2. The final export includes all messages visible when manually scrolling to the earliest message.
+
 ### Step 7: Add and Verify Popup Status Messaging
 
 Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
@@ -644,6 +653,12 @@ Verification data:
       }
     }
 
+### User Diagnostic Evidence (2026-01-11)
+
+User logs showed `scrollTop` reached 0 while additional history remained:
+
+    reached-top: iteration=18, scrollTop=0, scrollHeight=26801, clientHeight=984
+
 ### Performance Impact
 
 - Scroll time per iteration: 120ms → 300ms (2.5x increase)
@@ -765,3 +780,5 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:50JST: Recorded lint-staged test rerun and commit transcript for dynamic iteration cap change.
 2026-01-11 12:57JST: Added scroll height stability checks, updated plan sections, and marked the stability work complete.
 2026-01-11 12:57JST: Recorded lint-staged test rerun and commit transcript for scroll height stability changes.
+2026-01-11 13:18JST: Updated outcomes, context, validation criteria, and artifacts to reflect scroll-height stability learnings and user diagnostics.
+2026-01-11 13:18JST: Noted the stability learning and scroll loop behavior updates for documentation alignment.

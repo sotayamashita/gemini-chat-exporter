@@ -87,6 +87,12 @@
 - **Impact**: Must extract messages IMMEDIATELY after scroll completes, before auto scroll-back
 - **Current solution**: `extractMessages()` is synchronous (DOM read only), completes within ~300ms
 
+### Reaching Top Does Not Always Mean Complete History
+
+- Some chats keep loading older messages even after `scrollTop = 0` is reached.
+- **Impact**: `scrollTop = 0` alone is not a reliable completion signal.
+- **Current solution**: wait for `scrollHeight` to remain stable for multiple checks before extracting.
+
 ### Implementation Notes
 
 - Priority order for scroll container detection:
@@ -102,6 +108,9 @@
     - 300ms ensures 100% message retrieval
   - `SCROLL_SETTLE_DELAY = 300ms` (wait before extraction)
   - `SCROLL_MAX_ITERATIONS = 60` (max loops, ~18 seconds timeout with 300ms delay)
+  - `SCROLL_TOP_STABILITY_DELAY = 600ms` (wait between scroll-height checks)
+  - `SCROLL_TOP_STABILITY_PASSES = 2` (stable checks required before finishing)
+  - Dynamic iteration cap: `computedMaxIterations = max(SCROLL_MAX_ITERATIONS, ceil(scrollTop/SCROLL_STEP)+5)`
 
 ## Mapping to Existing Implementation
 
@@ -111,6 +120,9 @@
   - Update priority order when scroll container changes.
   - Always verify `scrollHeight > clientHeight` to confirm scrollability.
   - `infinite-scroller.chat-history` is the primary container as of 2026-01-11.
+- scroll loop behavior: `entrypoints/content.ts:56`
+  - Uses a dynamic iteration cap (`computedMaxIterations`).
+  - Requires `scrollHeight` stability after reaching `scrollTop = 0`.
 - marker detection: `src/export/discovery.ts:105` and `src/export/markers.ts:4`
   - Update `markers.ts` when UI labels change.
   - When supporting English UI, add English labels ("Copy prompt" / "Show thinking" / "Good response" / "Bad response").
@@ -325,6 +337,7 @@ await page.evaluate(() => {
   - User headings can be captured via `h2` or `role="heading"` + `aria-level="2"`
   - The relationship between `.code-block-decoration` and `pre > code` is preserved
   - Marker labels are retrievable via `aria-label`
+  - After forcing `scrollTop = 0`, `scrollHeight` should remain stable for multiple checks
 - Procedure:
   - Run the "Playwright MCP Concrete Verification Queries" in this file
   - If results differ, update both this document and the implementation
