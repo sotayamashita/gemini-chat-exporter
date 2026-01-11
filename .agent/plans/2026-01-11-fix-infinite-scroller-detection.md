@@ -414,6 +414,7 @@ Prior status (2026-01-11 12:27JST): Tests not run yet.
 
 Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 Updated status (2026-01-11 12:41JST): Tests executed again via lint-staged during `feat: show scroll status in popup` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
+Updated status (2026-01-11 12:45JST): Tests executed again via lint-staged during `feat: log scroll progress for exports` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 
 ### Observable Behavior
 
@@ -474,6 +475,17 @@ Edit `entrypoints/content.ts` to add `logScrollState` and emit scroll logs durin
 
     # Trigger export on a chat that stops early
     # Copy console logs that start with "[gemini-export] scroll"
+
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ rg -n "logScrollState|\\[gemini-export\\] scroll" entrypoints/content.ts
+    $ git commit -m "feat: log scroll progress for exports"
+    [STARTED] Running tasks for staged files...
+    [STARTED] pnpm compile
+    [COMPLETED] pnpm compile
+    [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [fix/infinite-scroller-detection 6666231] feat: log scroll progress for exports
 
 ## Idempotence and Recovery
 
@@ -621,3 +633,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:40JST: Implemented scroll-check status messaging changes and documented the new transcripts and validation status.
 2026-01-11 12:41JST: Recorded lint-staged test rerun during status messaging commit and added the commit transcript to concrete steps.
 2026-01-11 12:45JST: Added scroll progress logging to `entrypoints/content.ts`, expanded the plan with diagnostic steps, and marked logging work complete.
+2026-01-11 12:45JST: Recorded lint-staged test rerun during scroll logging commit and added the commit transcript.
