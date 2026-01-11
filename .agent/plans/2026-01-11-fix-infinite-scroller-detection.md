@@ -465,6 +465,7 @@ Updated status (2026-01-11 12:29JST): Tests executed via lint-staged (`pnpm comp
 Updated status (2026-01-11 12:41JST): Tests executed again via lint-staged during `feat: show scroll status in popup` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 Updated status (2026-01-11 12:45JST): Tests executed again via lint-staged during `feat: log scroll progress for exports` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 Updated status (2026-01-11 12:50JST): Tests executed again via lint-staged during `feat: compute scroll iterations dynamically` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
+Updated status (2026-01-11 12:57JST): Tests executed again via lint-staged during `feat: wait for scroll height stability` commit (`pnpm compile` and `vitest run --reporter=dot --no-coverage --maxWorkers=4`) with no failures reported.
 
 ### Observable Behavior
 
@@ -576,6 +577,13 @@ Edit `entrypoints/content.ts` to add `SCROLL_TOP_STABILITY_DELAY`, `SCROLL_TOP_S
 Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
 
     $ rg -n "SCROLL_TOP_STABILITY|scroll-stability" entrypoints/content.ts
+    $ git commit -m "feat: wait for scroll height stability"
+    [STARTED] Running tasks for staged files...
+    [STARTED] pnpm compile
+    [COMPLETED] pnpm compile
+    [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
+    [fix/infinite-scroller-detection 97f5c67] feat: wait for scroll height stability
     $ git commit -m "feat: compute scroll iterations dynamically"
     [STARTED] Running tasks for staged files...
     [STARTED] pnpm compile
@@ -756,3 +764,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:50JST: Added Playwright MCP evidence, decided on dynamic max iterations, and implemented the computed iteration cap.
 2026-01-11 12:50JST: Recorded lint-staged test rerun and commit transcript for dynamic iteration cap change.
 2026-01-11 12:57JST: Added scroll height stability checks, updated plan sections, and marked the stability work complete.
+2026-01-11 12:57JST: Recorded lint-staged test rerun and commit transcript for scroll height stability changes.
