@@ -1,6 +1,7 @@
 # Gemini Chat DOM Guide (for Exporter Maintenance)
 
 ## Purpose and Scope
+
 - This document is a practical guide to help the LLM self-correct when the Gemini Web UI DOM changes.
 - Scope is a single thread at `https://gemini.google.com/app/{chat_id}`. History lists and multi-chat pages are out of scope.
 - UI labels assume the Japanese UI (operationally, no multi-language support).
@@ -8,6 +9,7 @@
 - The same structure was also confirmed in the English UI (2026-01-10). English labels: "Copy prompt" / "Show thinking" / "Good response" / "Bad response".
 
 ## Data to Collect
+
 - Required per-message fields: `role` / `markdown` / `text` / `timestamp` / `order`
 - UI markers used for role detection: visible labels for user and Gemini buttons
 - Message elements: headings, paragraphs, lists, code, tables
@@ -15,6 +17,7 @@
 - Chat-level metadata: source URL / generation timestamp
 
 ## Gemini Page Structure Characteristics
+
 - Common:
   - The chat root tends to be near the ancestor of the heading "Conversation with Gemini / Gemini との会話".
   - Multiple Gemini markers can exist within a single reply and may map to different ancestors.
@@ -39,6 +42,7 @@
   - These classes were confirmed in both the short chat (`735afd264d35c312`) and long chat (`cbb342fdc6010a5e`).
 
 ## Mapping to Existing Implementation
+
 - chat root detection: `src/export/discovery.ts:147`
   - Update here if the heading/root search changes.
 - marker detection: `src/export/discovery.ts:105` and `src/export/markers.ts:4`
@@ -63,6 +67,7 @@
   - Update when output format changes.
 
 ## LLM Verification Procedure (Playwright MCP)
+
 - Navigate to the target chat: `https://gemini.google.com/app/{chat_id}`
 - Verify primary markers:
   - `button` `aria-label` / text includes 「プロンプトをコピー」「思考プロセスを表示」「良い回答」「悪い回答」
@@ -80,7 +85,7 @@
 ```ts
 // 1) Verify primary markers
 await page.evaluate(() => {
-  const labelText = (b) => (b.getAttribute("aria-label") || b.textContent || "");
+  const labelText = (b) => b.getAttribute("aria-label") || b.textContent || "";
   const markers = ["プロンプトをコピー", "思考プロセスを表示", "良い回答", "悪い回答"];
   return markers.map((label) => ({
     label,
@@ -104,10 +109,11 @@ await page.evaluate(() => {
 // 3) Gemini marker ancestor differences (check for duplicate extraction)
 await page.evaluate(() => {
   const normalize = (v) => (v || "").replace(/\\s+/g, " ").trim();
-  const buttons = Array.from(document.querySelectorAll("button")).filter((b) =>
-    normalize(b.textContent).includes("思考プロセスを表示") ||
-    normalize(b.textContent).includes("良い回答") ||
-    normalize(b.textContent).includes("悪い回答"),
+  const buttons = Array.from(document.querySelectorAll("button")).filter(
+    (b) =>
+      normalize(b.textContent).includes("思考プロセスを表示") ||
+      normalize(b.textContent).includes("良い回答") ||
+      normalize(b.textContent).includes("悪い回答"),
   );
   return buttons.slice(0, 6).map((b) => {
     let current = b.parentElement;
@@ -160,7 +166,7 @@ await page.evaluate(() => {
 ```ts
 // 1) Verify primary markers
 await page.evaluate(() => {
-  const labelText = (b) => (b.getAttribute("aria-label") || b.textContent || "");
+  const labelText = (b) => b.getAttribute("aria-label") || b.textContent || "";
   const markers = ["Copy prompt", "Show thinking", "Good response", "Bad response"];
   return markers.map((label) => ({
     label,
@@ -184,10 +190,11 @@ await page.evaluate(() => {
 // 3) Gemini marker ancestor differences (check for duplicate extraction)
 await page.evaluate(() => {
   const normalize = (v) => (v || "").replace(/\\s+/g, " ").trim();
-  const buttons = Array.from(document.querySelectorAll("button")).filter((b) =>
-    normalize(b.getAttribute("aria-label") || b.textContent).includes("Show thinking") ||
-    normalize(b.getAttribute("aria-label") || b.textContent).includes("Good response") ||
-    normalize(b.getAttribute("aria-label") || b.textContent).includes("Bad response"),
+  const buttons = Array.from(document.querySelectorAll("button")).filter(
+    (b) =>
+      normalize(b.getAttribute("aria-label") || b.textContent).includes("Show thinking") ||
+      normalize(b.getAttribute("aria-label") || b.textContent).includes("Good response") ||
+      normalize(b.getAttribute("aria-label") || b.textContent).includes("Bad response"),
   );
   return buttons.slice(0, 6).map((b) => {
     let current = b.parentElement;
@@ -236,6 +243,7 @@ await page.evaluate(() => {
 ```
 
 ### Fact-Check Policy (Playwright MCP)
+
 - Goal: Regularly verify that the DOM characteristics described in `docs/gemini-structure-guide.md` are reproducible in the actual Gemini UI.
 - When to run:
   - After changing DOM extraction logic
@@ -257,6 +265,7 @@ await page.evaluate(() => {
   - Scroll as needed and confirm the same structure near the bottom message blocks
 
 ## Change Detection and Update Procedure
+
 - Signals:
   - Role detection breaks (User/Gemini inverted or missing)
   - Replies are duplicated
@@ -266,15 +275,16 @@ await page.evaluate(() => {
   - Re-check primary markers, headings, and code block structure with Playwright MCP
   - Compare ancestor chains for the blocks referenced by markers
 - Update priority:
-  1) UI label updates in `markers.ts`
-  2) Block detection in `findMessageBlocks()` and `splitMixedBlock()`
-  3) Language detection in `collectCodeBlocks()` and `findLanguageLabel()`
-  4) Extraction elements in `serializeGeminiBlock()` / `serializeUserBlock()`
+  1. UI label updates in `markers.ts`
+  2. Block detection in `findMessageBlocks()` and `splitMixedBlock()`
+  3. Language detection in `collectCodeBlocks()` and `findLanguageLabel()`
+  4. Extraction elements in `serializeGeminiBlock()` / `serializeUserBlock()`
 - Post-update verification:
   - Run `pnpm test` to verify extraction-related units
   - Re-export the target chat and visually confirm duplicates, language, and structure
 
 ## Known Pitfalls and Mitigations
+
 - Double extraction: Gemini markers are split across `.response-content` and `.response-container`.
 - Language missing: Language labels are siblings of `pre`, so searching only inside `pre` misses them.
 - Missing headings: Some cases use `role="heading"` + `aria-level="2"` instead of `h2`.
