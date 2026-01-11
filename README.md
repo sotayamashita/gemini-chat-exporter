@@ -1,3 +1,1 @@
-# WXT + React
-
-This template should help get you started developing with React in WXT.
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sotayamashita/gemini-chat-exporter)
