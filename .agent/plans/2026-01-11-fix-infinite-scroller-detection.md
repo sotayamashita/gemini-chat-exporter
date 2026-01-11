@@ -19,6 +19,7 @@ Users should also understand when the exporter is actively scrolling or checking
 - [x] (2026-01-11 12:29JST) Run existing unit tests to verify no regressions
 - [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
 - [x] (2026-01-11 12:40JST) Add export status messaging for scroll checks in popup UI and content script
+- [x] (2026-01-11 12:45JST) Add detailed scroll progress logging for diagnostics
 
 ## Surprises & Discoveries
 
@@ -253,6 +254,19 @@ Introduce a lightweight status update message so the popup can display "Checking
 - In `entrypoints/popup/App.tsx`, add a `browser.runtime.onMessage` listener (registered with `useEffect`) to receive `export-status` messages and update the popup status message when `status.state === "working"`. Keep existing error/success handling unchanged.
 - Update `entrypoints/popup/App.tsx` initial working status to something neutral ("Preparing export…") so the scrolling status can override it.
 
+### Change 5: Add Scroll Progress Logging (Diagnostics)
+
+To help diagnose when scrolling stops early, add console logs around the scroll loop in `entrypoints/content.ts`:
+
+- Add a helper `logScrollState(label, container, iteration, maxIterations)` that logs `scrollTop`, `scrollHeight`, and `clientHeight` with a `[gemini-export] scroll` prefix.
+- Log at these points:
+  - `start` (first iteration)
+  - every `step` after waiting `SCROLL_DELAY`
+  - `reached-top` when `scrollTop === 0`
+  - `stalled` when the scroll position stops changing
+  - `max-iterations` when hitting `SCROLL_MAX_ITERATIONS`
+- This output lets users capture exact scroll metrics to report back.
+
 ## Concrete Steps
 
 All commands should be run from the repository root directory `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
@@ -421,6 +435,10 @@ Additional observable behavior for status messaging:
 
 Current status (2026-01-11 12:40JST): Status messaging not yet manually verified in the popup UI.
 
+Diagnostic output expectation:
+
+- Console logs prefixed with `[gemini-export] scroll` show `scrollTop`, `scrollHeight`, and `clientHeight` for each iteration.
+
 ### Step 7: Add and Verify Popup Status Messaging
 
 Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
@@ -449,6 +467,13 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
     [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
     [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
     [fix/infinite-scroller-detection 404f507] feat: show scroll status in popup
+
+### Step 8: Add Scroll Progress Logging
+
+Edit `entrypoints/content.ts` to add `logScrollState` and emit scroll logs during `autoScrollToTop`. Then rebuild and collect console output from Chrome DevTools:
+
+    # Trigger export on a chat that stops early
+    # Copy console logs that start with "[gemini-export] scroll"
 
 ## Idempotence and Recovery
 
@@ -562,6 +587,15 @@ The `ExportStatusUpdate` message is added to `src/export/messages.ts`:
 
 The `ScrollContainer` type is already defined in the codebase and represents an HTML element with scroll capabilities. It must have the properties `scrollTop`, `scrollHeight`, and `clientHeight`.
 
+The `logScrollState` helper is added in `entrypoints/content.ts`:
+
+    const logScrollState = (
+      label: string,
+      container: ScrollContainer,
+      iteration?: number,
+      maxIterations?: number,
+    ) => void;
+
 The `findScrollContainer()` function signature remains unchanged:
 
     function findScrollContainer(root: Element): ScrollContainer | null
@@ -586,3 +620,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:35JST: Added a scroll-check status messaging plan, updated progress, surprises, decisions, concrete steps, and interfaces to include the new popup feedback work.
 2026-01-11 12:40JST: Implemented scroll-check status messaging changes and documented the new transcripts and validation status.
 2026-01-11 12:41JST: Recorded lint-staged test rerun during status messaging commit and added the commit transcript to concrete steps.
+2026-01-11 12:45JST: Added scroll progress logging to `entrypoints/content.ts`, expanded the plan with diagnostic steps, and marked logging work complete.

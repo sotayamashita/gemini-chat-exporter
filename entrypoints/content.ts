@@ -43,6 +43,23 @@ const findScrollContainer = (root: Element): ScrollContainer | null => {
   return best;
 };
 
+const logScrollState = (
+  label: string,
+  container: ScrollContainer,
+  iteration?: number,
+  maxIterations?: number,
+) => {
+  const payload = {
+    label,
+    iteration,
+    maxIterations,
+    scrollTop: container.scrollTop,
+    scrollHeight: container.scrollHeight,
+    clientHeight: container.clientHeight,
+  };
+  console.log("[gemini-export] scroll", payload);
+};
+
 const autoScrollToTop = async (
   container: ScrollContainer,
   onPhase: (update: ExportStatusUpdate) => void,
@@ -56,19 +73,23 @@ const autoScrollToTop = async (
         detail:
           container.scrollTop === 0 ? "Checking for older messages…" : "Scrolling chat history…",
       });
+      logScrollState("start", container, iteration, SCROLL_MAX_ITERATIONS);
     }
     const nextTop = Math.max(0, container.scrollTop - SCROLL_STEP);
     container.scrollTop = nextTop;
     await wait(SCROLL_DELAY);
+    logScrollState("step", container, iteration, SCROLL_MAX_ITERATIONS);
 
     if (container.scrollTop === 0) {
       await wait(SCROLL_SETTLE_DELAY);
+      logScrollState("reached-top", container, iteration, SCROLL_MAX_ITERATIONS);
       return { ok: true };
     }
 
     if (container.scrollTop === previousTop) {
       await wait(SCROLL_SETTLE_DELAY);
       if (container.scrollTop === previousTop) {
+        logScrollState("stalled", container, iteration, SCROLL_MAX_ITERATIONS);
         return {
           ok: false,
           error: "Chat scroll position did not change. Scroll to the top manually and try again.",
@@ -78,6 +99,7 @@ const autoScrollToTop = async (
     previousTop = container.scrollTop;
   }
 
+  logScrollState("max-iterations", container, SCROLL_MAX_ITERATIONS, SCROLL_MAX_ITERATIONS);
   return {
     ok: false,
     error: "Chat history did not finish loading. Scroll to the top and try again.",
