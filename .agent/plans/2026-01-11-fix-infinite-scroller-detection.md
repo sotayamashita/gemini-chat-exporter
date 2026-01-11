@@ -20,6 +20,7 @@ Users should also understand when the exporter is actively scrolling or checking
 - [ ] Manual verification with long chat export (partial: `pnpm build` completed; browser export pending)
 - [x] (2026-01-11 12:40JST) Add export status messaging for scroll checks in popup UI and content script
 - [x] (2026-01-11 12:45JST) Add detailed scroll progress logging for diagnostics
+- [x] (2026-01-11 12:50JST) Adjust scroll iteration limit based on starting scroll position
 
 ## Surprises & Discoveries
 
@@ -70,6 +71,17 @@ Evidence from current implementation (`entrypoints/content.ts`):
       return { ok: true };
     }
 
+### Scroll Height Stability After Reaching Top (Playwright MCP)
+
+Playwright MCP check on `https://gemini.google.com/app/cbb342fdc6010a5e` shows that `scrollHeight` did not grow after forcing `scrollTop = 0` and waiting 1.8 seconds. This suggests that extra "wait for scrollHeight to stabilize" logic is not necessary for this chat, and the more likely issue for long chats is hitting the maximum iteration limit before reaching the top.
+
+Evidence (Playwright MCP, 2026-01-11):
+
+    initial: scrollTop=21693, scrollHeight=26801, clientHeight=858
+    afterSet: scrollTop=0, scrollHeight=26801, clientHeight=858
+    after600ms: scrollTop=0, scrollHeight=26801, clientHeight=854
+    after1800ms: scrollTop=0, scrollHeight=26801, clientHeight=854
+
 ## Decision Log
 
 - Decision: Prioritize `infinite-scroller.chat-history` over `div.chat-history-scroll-container` in scroll container detection
@@ -86,6 +98,10 @@ Evidence from current implementation (`entrypoints/content.ts`):
 
 - Decision: Surface a dedicated "scroll check" status message in the popup UI during export
   Rationale: Users cannot tell why exports are delayed when scrolling is not required. Explicit status updates reduce confusion and make the export feel responsive even during unavoidable waits.
+  Date: 2026-01-11
+
+- Decision: Compute a dynamic maximum scroll iteration count based on initial `scrollTop`
+  Rationale: Playwright MCP shows `scrollHeight` is stable after reaching the top, so the more likely failure mode for long chats is hitting the fixed `SCROLL_MAX_ITERATIONS` before reaching `scrollTop = 0`. Using a computed ceiling (derived from initial scroll distance) avoids premature failure without removing a safety cap.
   Date: 2026-01-11
 
 ## Outcomes & Retrospective
@@ -267,6 +283,14 @@ To help diagnose when scrolling stops early, add console logs around the scroll 
   - `max-iterations` when hitting `SCROLL_MAX_ITERATIONS`
 - This output lets users capture exact scroll metrics to report back.
 
+### Change 6: Dynamic Maximum Iterations
+
+Replace the fixed iteration cap inside `autoScrollToTop()` with a computed limit based on the starting scroll position:
+
+- Compute `computedMaxIterations = Math.max(SCROLL_MAX_ITERATIONS, Math.ceil(container.scrollTop / SCROLL_STEP) + 5)`.
+- Use `computedMaxIterations` in the loop condition and in diagnostic logs.
+- Keep `SCROLL_MAX_ITERATIONS` as a floor so small chats behave as before.
+
 ## Concrete Steps
 
 All commands should be run from the repository root directory `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
@@ -440,6 +464,12 @@ Diagnostic output expectation:
 
 - Console logs prefixed with `[gemini-export] scroll` show `scrollTop`, `scrollHeight`, and `clientHeight` for each iteration.
 
+Additional observable behavior for dynamic iteration limit:
+
+1. Start export in a very long chat.
+2. Confirm `[gemini-export] scroll` logs show `maxIterations` greater than 60 when starting `scrollTop` is large.
+3. Confirm scrolling continues until `scrollTop = 0` without hitting `max-iterations`.
+
 ### Step 7: Add and Verify Popup Status Messaging
 
 Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/App.tsx` to add the `export-status` message and update the popup UI during scroll checks. After rebuilding and loading the extension:
@@ -476,6 +506,10 @@ Edit `entrypoints/content.ts` to add `logScrollState` and emit scroll logs durin
     # Trigger export on a chat that stops early
     # Copy console logs that start with "[gemini-export] scroll"
 
+### Step 9: Adjust Iteration Limit for Long Chats
+
+Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` based on the initial `scrollTop` and use it in the scroll loop. Then rebuild and verify that a very long chat no longer stops early before reaching `scrollTop = 0`.
+
 Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
 
     $ rg -n "logScrollState|\\[gemini-export\\] scroll" entrypoints/content.ts
@@ -486,6 +520,22 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
     [STARTED] vitest run --reporter=dot --no-coverage --maxWorkers=4
     [COMPLETED] vitest run --reporter=dot --no-coverage --maxWorkers=4
     [fix/infinite-scroller-detection 6666231] feat: log scroll progress for exports
+
+Playwright MCP transcript (browser context):
+
+    const container = document.querySelector('infinite-scroller.chat-history');
+    initial: scrollTop=21693, scrollHeight=26801, clientHeight=858
+    afterSet: scrollTop=0, scrollHeight=26801, clientHeight=858
+    after600ms: scrollTop=0, scrollHeight=26801, clientHeight=854
+    after1800ms: scrollTop=0, scrollHeight=26801, clientHeight=854
+
+### Step 9: Adjust Iteration Limit for Long Chats
+
+Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` based on the initial `scrollTop` and use it in the scroll loop. Then rebuild and verify that a very long chat no longer stops early before reaching `scrollTop = 0`.
+
+Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+
+    $ rg -n "computedMaxIterations|max-iterations" entrypoints/content.ts
 
 ## Idempotence and Recovery
 
@@ -608,6 +658,13 @@ The `logScrollState` helper is added in `entrypoints/content.ts`:
       maxIterations?: number,
     ) => void;
 
+The scroll loop now uses a per-export `computedMaxIterations` value derived from initial `scrollTop`:
+
+    const computedMaxIterations = Math.max(
+      SCROLL_MAX_ITERATIONS,
+      Math.ceil(container.scrollTop / SCROLL_STEP) + 5,
+    );
+
 The `findScrollContainer()` function signature remains unchanged:
 
     function findScrollContainer(root: Element): ScrollContainer | null
@@ -634,3 +691,4 @@ Each tier validates that `scrollHeight > clientHeight` before accepting the cont
 2026-01-11 12:41JST: Recorded lint-staged test rerun during status messaging commit and added the commit transcript to concrete steps.
 2026-01-11 12:45JST: Added scroll progress logging to `entrypoints/content.ts`, expanded the plan with diagnostic steps, and marked logging work complete.
 2026-01-11 12:45JST: Recorded lint-staged test rerun during scroll logging commit and added the commit transcript.
+2026-01-11 12:50JST: Added Playwright MCP evidence, decided on dynamic max iterations, and implemented the computed iteration cap.

@@ -64,8 +64,12 @@ const autoScrollToTop = async (
   container: ScrollContainer,
   onPhase: (update: ExportStatusUpdate) => void,
 ): Promise<ScrollResult> => {
+  const computedMaxIterations = Math.max(
+    SCROLL_MAX_ITERATIONS,
+    Math.ceil(container.scrollTop / SCROLL_STEP) + 5,
+  );
   let previousTop = container.scrollTop;
-  for (let iteration = 0; iteration < SCROLL_MAX_ITERATIONS; iteration += 1) {
+  for (let iteration = 0; iteration < computedMaxIterations; iteration += 1) {
     if (iteration === 0) {
       onPhase({
         type: "export-status",
@@ -73,23 +77,23 @@ const autoScrollToTop = async (
         detail:
           container.scrollTop === 0 ? "Checking for older messages…" : "Scrolling chat history…",
       });
-      logScrollState("start", container, iteration, SCROLL_MAX_ITERATIONS);
+      logScrollState("start", container, iteration, computedMaxIterations);
     }
     const nextTop = Math.max(0, container.scrollTop - SCROLL_STEP);
     container.scrollTop = nextTop;
     await wait(SCROLL_DELAY);
-    logScrollState("step", container, iteration, SCROLL_MAX_ITERATIONS);
+    logScrollState("step", container, iteration, computedMaxIterations);
 
     if (container.scrollTop === 0) {
       await wait(SCROLL_SETTLE_DELAY);
-      logScrollState("reached-top", container, iteration, SCROLL_MAX_ITERATIONS);
+      logScrollState("reached-top", container, iteration, computedMaxIterations);
       return { ok: true };
     }
 
     if (container.scrollTop === previousTop) {
       await wait(SCROLL_SETTLE_DELAY);
       if (container.scrollTop === previousTop) {
-        logScrollState("stalled", container, iteration, SCROLL_MAX_ITERATIONS);
+        logScrollState("stalled", container, iteration, computedMaxIterations);
         return {
           ok: false,
           error: "Chat scroll position did not change. Scroll to the top manually and try again.",
@@ -99,7 +103,7 @@ const autoScrollToTop = async (
     previousTop = container.scrollTop;
   }
 
-  logScrollState("max-iterations", container, SCROLL_MAX_ITERATIONS, SCROLL_MAX_ITERATIONS);
+  logScrollState("max-iterations", container, computedMaxIterations, computedMaxIterations);
   return {
     ok: false,
     error: "Chat history did not finish loading. Scroll to the top and try again.",
