@@ -2,12 +2,17 @@
  * @type {import('lint-staged').Configuration}
  */
 export default {
-  // https://github.com/secretlint/secretlint
-  "*.{ts,tsx,js,jsx,json}": [
-    "oxfmt",
-    "oxlint --fix",
+  // All files: format and security check
+  "*": [
+    "oxfmt --no-error-on-unmatched-pattern",
+    // https://github.com/secretlint/secretlint
     "secretlint",
+  ],
+
+  // TypeScript/React/JavaScript files: additional checks
+  "*.{ts,tsx,js,jsx}": [
+    "oxlint --fix",
     () => "pnpm compile",
-    () => "pnpm build",
+    () => "vitest run --reporter=dot --no-coverage --maxWorkers=4",
   ],
 };
