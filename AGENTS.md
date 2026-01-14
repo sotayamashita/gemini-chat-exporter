@@ -46,6 +46,7 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 ## Commit & Pull Request Guidelines
 
 - Commit messages must follow Conventional Commits (e.g., `chore: init project`, `feat: add popup state`).
+- Create PRs with GitHub CLI using a structured body that includes `## Summary` and `## Testing` sections with bullet lists. Use `gh pr create --body $'...'` (ANSI-C quoting) or `gh pr create --body-file` to preserve newlines and avoid broken formatting.
 - PRs should include a short description, relevant screenshots for UI changes, and any linked issues.
 
 ## Security & Configuration Tips
