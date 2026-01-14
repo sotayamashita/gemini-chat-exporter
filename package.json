@@ -33,6 +33,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.0.16",
+    "@wxt-dev/auto-icons": "^1.1.0",
     "@wxt-dev/module-react": "^1.1.5",
     "husky": "^9.1.7",
     "jsdom": "^27.4.0",
