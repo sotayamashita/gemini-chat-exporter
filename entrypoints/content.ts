@@ -21,6 +21,29 @@ const SCROLL_TOP_STABILITY_PASSES = 2;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const findScrollContainer = (root: Element): ScrollContainer | null => {
+  if (
+    root instanceof HTMLElement &&
+    root.matches('infinite-scroller[data-test-id="chat-history-container"]') &&
+    root.scrollHeight > root.clientHeight
+  ) {
+    return root;
+  }
+
+  if (
+    root instanceof HTMLElement &&
+    root.matches("infinite-scroller.chat-history") &&
+    root.scrollHeight > root.clientHeight
+  ) {
+    return root;
+  }
+
+  const dataTestScroller = root.querySelector<HTMLElement>(
+    'infinite-scroller[data-test-id="chat-history-container"]',
+  );
+  if (dataTestScroller && dataTestScroller.scrollHeight > dataTestScroller.clientHeight) {
+    return dataTestScroller;
+  }
+
   const infiniteScroller = root.querySelector<HTMLElement>("infinite-scroller.chat-history");
   if (infiniteScroller && infiniteScroller.scrollHeight > infiniteScroller.clientHeight) {
     return infiniteScroller;

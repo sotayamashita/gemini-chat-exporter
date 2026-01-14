@@ -331,7 +331,7 @@ For Vitest, document the exact setup: add `vitest`, `@vitest/coverage-v8`, and `
 
 Concrete steps executed (2026-01-09 09:10JST - 10:30JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Listed files and inspected plan/config:
   $ ls
@@ -381,7 +381,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 - Verified TypeScript compile:
   $ pnpm compile
 
-  > wxt-react-starter@0.0.0 compile /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+  > wxt-react-starter@0.0.0 compile /path/to/gemini-chat-exporter
   > tsc --noEmit
 
 - Aligned content script matches with host permissions:
@@ -434,7 +434,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 17:27JST - 17:31JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Added Vitest/JSDOM dependencies:
   $ pnpm add -D vitest @vitest/coverage-v8 jsdom
@@ -467,7 +467,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 17:41JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Documented test commands in AGENTS.md:
   $ cat AGENTS.md
@@ -475,7 +475,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 17:47JST - 17:49JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Added mixed-block and timestamp tests:
   $ cat src/export/**tests**/extract.test.ts
@@ -491,14 +491,14 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 18:00JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Reverted the Playwright E2E script commit:
   $ git revert 0b49cc70a8a0d935a9920c010ddb848ed7ff2127
 
 Concrete steps executed (2026-01-09 18:02JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Added source URL to export payload and Markdown metadata:
   $ cat src/export/types.ts
@@ -510,7 +510,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 18:21JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Inspected Gemini chat DOM via Playwright MCP:
   (navigated to https://gemini.google.com/app/735afd264d35c312)
@@ -518,7 +518,7 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 18:22JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Expanded user heading detection to role/aria-level:
   $ cat src/export/discovery.ts
@@ -534,13 +534,13 @@ Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
 
 Concrete steps executed (2026-01-09 20:03JST):
 
-Working directory: /Users/sotayamashita/Projects/autify/gemini-chat-exporter
+Working directory: /path/to/gemini-chat-exporter
 
 - Updated CI to read Node/pnpm versions from mise.toml:
   $ cat .github/workflows/ci.yml
   (added mise.toml parsing step and wired setup-node/pnpm action versions)
 
-All steps should be executed in the repository root: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
+All steps should be executed in the repository root: `/path/to/gemini-chat-exporter`.
 
 ## Validation and Acceptance
 

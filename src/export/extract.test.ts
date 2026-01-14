@@ -7,15 +7,12 @@ describe("export extraction", () => {
   it("extracts user and gemini messages with markdown", () => {
     document.body.innerHTML = `
       <main>
-        <section class="chat-root">
-          <h2>Gemini との会話</h2>
-          <section class="message user">
-            <button>プロンプトをコピー</button>
+        <div id="chat-history" class="chat-history-scroll-container">
+          <user-query>
             <h2>What is Gemini?</h2>
             <time>12:34</time>
-          </section>
-          <section class="message gemini">
-            <button>思考プロセスを表示</button>
+          </user-query>
+          <model-response>
             <p>Gemini is a multimodal model.</p>
             <ul>
               <li>Fast</li>
@@ -23,15 +20,14 @@ describe("export extraction", () => {
             </ul>
             <div class="code-block">
               <span class="code-block-decoration">Python</span>
-              <button>コードをコピー</button>
               <pre><code>print("hi")\n</code></pre>
             </div>
             <table>
               <tr><th>A</th><th>B</th></tr>
               <tr><td>1</td><td>2</td></tr>
             </table>
-          </section>
-        </section>
+          </model-response>
+        </div>
       </main>
     `;
 
@@ -44,7 +40,6 @@ describe("export extraction", () => {
     expect(messages[0].role).toBe("user");
     expect(messages[0].markdown).toBe("What is Gemini?");
     expect(messages[0].timestamp).toBe("12:34");
-    expect(messages[0].markdown).not.toContain("プロンプトをコピー");
 
     expect(messages[1].role).toBe("gemini");
     expect(messages[1].markdown).toContain("Gemini is a multimodal model.");
@@ -54,23 +49,19 @@ describe("export extraction", () => {
     expect(messages[1].markdown).toContain('print("hi")');
     expect(messages[1].markdown).toContain("| A | B |");
     expect(messages[1].markdown).toContain("<!-- gemini-export:block type=code");
-    expect(messages[1].markdown).not.toContain("思考プロセスを表示");
   });
 
   it("orders messages based on document position", () => {
     document.body.innerHTML = `
       <main>
-        <section class="chat-root">
-          <h2>Gemini との会話</h2>
-          <section class="message gemini">
-            <button>思考プロセスを表示</button>
+        <div id="chat-history" class="chat-history-scroll-container">
+          <model-response>
             <p>First response</p>
-          </section>
-          <section class="message user">
-            <button>プロンプトをコピー</button>
+          </model-response>
+          <user-query>
             <h2>Second prompt</h2>
-          </section>
-        </section>
+          </user-query>
+        </div>
       </main>
     `;
 
@@ -83,47 +74,35 @@ describe("export extraction", () => {
     expect(messages[1].markdown).toContain("Second prompt");
   });
 
-  it("splits mixed blocks into user and gemini segments", () => {
+  it("removes UI controls from extracted text", () => {
     document.body.innerHTML = `
       <main>
-        <section class="chat-root">
-          <h2>Gemini との会話</h2>
-          <section class="message mixed">
-            <section class="user">
-              <button>プロンプトをコピー</button>
-              <h2>User prompt</h2>
-            </section>
-            <section class="gemini">
-              <button>思考プロセスを表示</button>
-              <p>Assistant response</p>
-            </section>
-          </section>
-        </section>
+        <div id="chat-history" class="chat-history-scroll-container">
+          <model-response>
+            <button>Copy response</button>
+            <p>Response content</p>
+          </model-response>
+        </div>
       </main>
     `;
 
     const root = findChatRoot(document);
-    expect(root).not.toBeNull();
-
     const messages = extractMessages(root!);
-    expect(messages).toHaveLength(2);
-    expect(messages[0].role).toBe("user");
-    expect(messages[0].markdown).toBe("User prompt");
-    expect(messages[1].role).toBe("gemini");
-    expect(messages[1].markdown).toContain("Assistant response");
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].text).toContain("Response content");
+    expect(messages[0].text).not.toContain("Copy response");
   });
 
   it("detects timestamp from aria-label when time tag is missing", () => {
     document.body.innerHTML = `
       <main>
-        <section class="chat-root">
-          <h2>Gemini との会話</h2>
-          <section class="message user">
-            <button>プロンプトをコピー</button>
+        <div id="chat-history" class="chat-history-scroll-container">
+          <user-query>
             <div role="heading" aria-level="2">Hello</div>
             <div aria-label="09:41">meta</div>
-          </section>
-        </section>
+          </user-query>
+        </div>
       </main>
     `;
 
@@ -135,18 +114,15 @@ describe("export extraction", () => {
     expect(messages[0].timestamp).toBe("09:41");
   });
 
-  // 境界値分析 - maxCharsPerMessage オプション
   describe("maxCharsPerMessage option", () => {
     it("does not truncate when limit is not set", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>${"a".repeat(200)}</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
@@ -159,13 +135,11 @@ describe("export extraction", () => {
     it("does not truncate when content is below limit", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>${"a".repeat(90)}</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
@@ -178,13 +152,11 @@ describe("export extraction", () => {
     it("does not truncate when content equals limit", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>${"a".repeat(100)}</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
@@ -197,13 +169,11 @@ describe("export extraction", () => {
     it("truncates when content exceeds limit by one character", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>${"a".repeat(101)}</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
@@ -216,13 +186,11 @@ describe("export extraction", () => {
     it("truncates when content significantly exceeds limit", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>${"a".repeat(500)}</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
@@ -233,15 +201,12 @@ describe("export extraction", () => {
     });
   });
 
-  // エッジケース
   describe("edge cases", () => {
     it("handles deeply nested elements", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message gemini">
-              <button>思考プロセスを表示</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <model-response>
               <div>
                 <div>
                   <div>
@@ -249,8 +214,8 @@ describe("export extraction", () => {
                   </div>
                 </div>
               </div>
-            </section>
-          </section>
+            </model-response>
+          </div>
         </main>
       `;
 
@@ -263,20 +228,17 @@ describe("export extraction", () => {
     it("handles special markdown characters", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message user">
-              <button>プロンプトをコピー</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <user-query>
               <h2>**Bold** _italic_ \`code\` #heading</h2>
-            </section>
-          </section>
+            </user-query>
+          </div>
         </main>
       `;
 
       const root = findChatRoot(document);
       const messages = extractMessages(root!);
 
-      // Special characters should be preserved in markdown
       expect(messages[0].markdown).toContain("**Bold**");
       expect(messages[0].markdown).toContain("_italic_");
       expect(messages[0].markdown).toContain("`code`");
@@ -286,10 +248,8 @@ describe("export extraction", () => {
     it("handles multiple code blocks in a message", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message gemini">
-              <button aria-label="思考プロセスを表示"></button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <model-response>
               <p>First code:</p>
               <div class="code-block">
                 <span class="code-block-decoration">Python</span>
@@ -300,29 +260,25 @@ describe("export extraction", () => {
                 <span class="code-block-decoration">JavaScript</span>
                 <pre><code>console.log("world")</code></pre>
               </div>
-            </section>
-          </section>
+            </model-response>
+          </div>
         </main>
       `;
 
       const root = findChatRoot(document);
       const messages = extractMessages(root!);
 
-      // Code blocks are present
       expect(messages[0].markdown).toContain('print("hello")');
       expect(messages[0].markdown).toContain('console.log("world")');
       expect(messages[0].markdown).toContain("```");
-      // Contains code block markers
       expect(messages[0].markdown).toContain("<!-- gemini-export:block type=code");
     });
 
     it("handles multiple tables in a message", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message gemini">
-              <button>思考プロセスを表示</button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <model-response>
               <p>First table:</p>
               <table>
                 <tr><th>A</th><th>B</th></tr>
@@ -333,8 +289,8 @@ describe("export extraction", () => {
                 <tr><th>X</th><th>Y</th></tr>
                 <tr><td>3</td><td>4</td></tr>
               </table>
-            </section>
-          </section>
+            </model-response>
+          </div>
         </main>
       `;
 
@@ -350,10 +306,8 @@ describe("export extraction", () => {
     it("handles mixed content (code + table + list)", () => {
       document.body.innerHTML = `
         <main>
-          <section class="chat-root">
-            <h2>Gemini との会話</h2>
-            <section class="message gemini">
-              <button aria-label="思考プロセスを表示"></button>
+          <div id="chat-history" class="chat-history-scroll-container">
+            <model-response>
               <p>Text content</p>
               <ul>
                 <li>Item 1</li>
@@ -367,8 +321,8 @@ describe("export extraction", () => {
                 <tr><th>Col1</th><th>Col2</th></tr>
                 <tr><td>Val1</td><td>Val2</td></tr>
               </table>
-            </section>
-          </section>
+            </model-response>
+          </div>
         </main>
       `;
 

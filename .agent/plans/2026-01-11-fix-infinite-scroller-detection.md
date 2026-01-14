@@ -322,7 +322,7 @@ Extend `autoScrollToTop()` so it only exits after the scroll height remains stab
 
 ## Concrete Steps
 
-All commands should be run from the repository root directory `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`.
+All commands should be run from the repository root directory `/path/to/gemini-chat-exporter`.
 
 ### Step 1: Read Current Implementation
 
@@ -331,7 +331,7 @@ All commands should be run from the repository root directory `/Users/sotayamash
 
 Observe lines 10-13 (scroll constants) and lines 17-37 (findScrollContainer function).
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ cat entrypoints/content.ts
     const SCROLL_STEP = 1200;
@@ -373,7 +373,7 @@ Edit `docs/gemini-structure-guide.md` to add the new section "Infinite Scroller 
 
 Also update the "Mapping to Existing Implementation" section to reference scroll container detection at `entrypoints/content.ts:17`.
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ sed -n '1,200p' entrypoints/content.ts
     const SCROLL_STEP = 1200;
@@ -406,7 +406,7 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
 
 Expected output: All existing tests pass. The DOM structure changes do not affect the extraction logic tests in `src/export/extract.test.ts`.
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ git commit -m "fix: prioritize infinite scroller detection"
     [STARTED] Running tasks for staged files...
@@ -426,7 +426,7 @@ Build and load the extension, then export a known long chat:
     # Click export button
     # Verify exported file contains 72 messages (36 user + 36 Gemini)
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ pnpm build
     WXT 0.20.13
@@ -523,13 +523,13 @@ Edit `src/export/messages.ts`, `entrypoints/content.ts`, and `entrypoints/popup/
     # Observe popup status transitions:
     #   "Preparing export…" → "Scrolling chat history…" (or "Checking for older messages…") → "Collecting messages…" → success/error
 
-Plan maintenance transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Plan maintenance transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ rg -n "Plan of Work|Change 3|Observable Behavior|Interfaces and Dependencies" .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
     $ sed -n '111,280p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
     $ sed -n '530,590p' .agent/plans/2026-01-11-fix-infinite-scroller-detection.md
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ rg -n "export-current-chat|onMessage" entrypoints/content.ts entrypoints/popup/App.tsx src/export/messages.ts
     $ rg -n "ExportStatusUpdate|export-status" src/export/messages.ts entrypoints/content.ts entrypoints/popup/App.tsx
@@ -552,7 +552,7 @@ Edit `entrypoints/content.ts` to add `logScrollState` and emit scroll logs durin
 
 Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` based on the initial `scrollTop` and use it in the scroll loop. Then rebuild and verify that a very long chat no longer stops early before reaching `scrollTop = 0`.
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ rg -n "logScrollState|\\[gemini-export\\] scroll" entrypoints/content.ts
     $ git commit -m "feat: log scroll progress for exports"
@@ -575,7 +575,7 @@ Playwright MCP transcript (browser context):
 
 Edit `entrypoints/content.ts` to compute a per-export `computedMaxIterations` based on the initial `scrollTop` and use it in the scroll loop. Then rebuild and verify that a very long chat no longer stops early before reaching `scrollTop = 0`.
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ rg -n "computedMaxIterations|max-iterations" entrypoints/content.ts
 
@@ -583,7 +583,7 @@ Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/ge
 
 Edit `entrypoints/content.ts` to add `SCROLL_TOP_STABILITY_DELAY`, `SCROLL_TOP_STABILITY_PASSES`, and a `scroll-stability` log. Rebuild and verify that the exporter waits for the scroll height to stabilize before finishing.
 
-Concrete transcript (working directory: `/Users/sotayamashita/Projects/autify/gemini-chat-exporter`):
+Concrete transcript (working directory: `/path/to/gemini-chat-exporter`):
 
     $ rg -n "SCROLL_TOP_STABILITY|scroll-stability" entrypoints/content.ts
     $ git commit -m "feat: wait for scroll height stability"
