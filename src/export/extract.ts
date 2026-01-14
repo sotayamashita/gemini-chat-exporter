@@ -1,11 +1,5 @@
-import { GEMINI_MARKERS, UI_LABELS, USER_MARKERS } from "@/src/export/markers";
 import type { ExportMessage, ExportRole } from "@/src/export/types";
 import { findMessageBlocks, splitMixedBlock } from "@/src/export/discovery";
-
-/**
- * Marker role derived from UI labels.
- */
-type MarkerRole = "user" | "gemini";
 
 /**
  * Describes a parsed block item within a chat segment.
@@ -29,41 +23,44 @@ const normalizeText = (value: string | null | undefined) =>
   value?.replace(/\s+/g, " ").trim() ?? "";
 
 /**
- * Removes UI labels (copy buttons, ratings) from extracted text.
+ * Normalizes extracted text for display and export.
  */
-const stripUiLabels = (value: string) => {
-  let output = value;
-  for (const label of UI_LABELS) {
-    output = output.replaceAll(label, "");
+const normalizeOutput = (value: string) => normalizeText(value);
+
+/**
+ * Clone the block and strip UI controls so text extraction is language-agnostic.
+ */
+const cloneAndStripUi = (block: Element) => {
+  const clone = block.cloneNode(true) as Element;
+  const selectors = [
+    "button",
+    '[role="button"]',
+    "message-actions",
+    "mat-menu",
+    "mat-icon",
+    ".response-container-header",
+    ".response-container-header-controls",
+    ".response-container-header-status",
+    ".response-container-header-processing-state",
+    ".response-tts-container",
+    ".menu-button-wrapper",
+    ".more-menu-button-container",
+    "copy-button",
+    "thumb-up-button",
+    "thumb-down-button",
+    "regenerate-button",
+    '[data-test-id="copy-button"]',
+    '[data-test-id="more-menu-button"]',
+    '[data-test-id="actions-menu-button"]',
+    '[data-test-id="thoughts-header-button"]',
+  ];
+
+  for (const selector of selectors) {
+    clone.querySelectorAll(selector).forEach((element) => element.remove());
   }
-  return normalizeText(output);
+
+  return clone;
 };
-
-/**
- * Checks whether the text contains any of the marker strings.
- */
-const textMatches = (value: string, markers: string[]) =>
-  markers.some((marker) => value.includes(marker));
-
-/**
- * Reads a button's accessible label or visible text.
- */
-const buttonText = (button: HTMLButtonElement) =>
-  normalizeText(button.getAttribute("aria-label") || button.textContent);
-
-/**
- * Checks if a block contains any of the marker buttons.
- */
-const blockHasMarkers = (block: Element, markers: string[]) =>
-  Array.from(block.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
-    textMatches(buttonText(button), markers),
-  );
-
-/**
- * Checks if a block contains markers for a specific role.
- */
-const hasRoleMarkers = (block: Element, role: MarkerRole) =>
-  blockHasMarkers(block, role === "user" ? USER_MARKERS : GEMINI_MARKERS);
 
 /**
  * Comparator that sorts elements by document order.
@@ -117,7 +114,7 @@ const isWithin = (element: Element, container: Element) =>
 const findLanguageLabel = (container: Element) => {
   const codeBlock = container.classList.contains("code-block")
     ? container
-    : container.closest(".code-block");
+    : container.closest(".code-block, code-block");
   const decorated = codeBlock?.querySelector<HTMLElement>(".code-block-decoration");
   const decoratedText = normalizeText(decorated?.textContent);
   if (decoratedText && /^[A-Za-z0-9+#_.-]{1,20}$/.test(decoratedText)) {
@@ -148,6 +145,19 @@ const collectCodeBlocks = (block: Element) => {
   const codeElements = Array.from(block.querySelectorAll("code"));
   const containers = new Map<Element, { code: string; lang: string | null }>();
 
+  const resolveContainer = (element: Element) =>
+    element.closest(".code-block") ??
+    element.closest("code-block") ??
+    element.closest("pre") ??
+    element;
+
+  const addContainer = (container: Element, code: string, lang: string | null) => {
+    if (containers.has(container)) {
+      return;
+    }
+    containers.set(container, { code, lang });
+  };
+
   for (const code of codeElements) {
     const codeText = code.textContent ?? "";
     const isBlock = codeText.includes("\n") || Boolean(code.closest("pre"));
@@ -155,13 +165,38 @@ const collectCodeBlocks = (block: Element) => {
       continue;
     }
 
-    const container = code.closest(".code-block") ?? code.closest("pre") ?? code;
+    const container = resolveContainer(code);
+    const lang = findLanguageLabel(container);
+    addContainer(container, codeText, lang);
+  }
+
+  const preElements = Array.from(block.querySelectorAll("pre"));
+  for (const pre of preElements) {
+    if (pre.querySelector("code")) {
+      continue;
+    }
+    const codeText = pre.textContent ?? "";
+    if (!codeText.trim()) {
+      continue;
+    }
+    const container = resolveContainer(pre);
+    const lang = findLanguageLabel(container);
+    addContainer(container, codeText, lang);
+  }
+
+  const codeBlockElements = Array.from(block.querySelectorAll("code-block"));
+  for (const codeBlock of codeBlockElements) {
+    const container = codeBlock.querySelector<HTMLElement>(".code-block") ?? codeBlock;
     if (containers.has(container)) {
       continue;
     }
-
+    const code = codeBlock.querySelector("code, pre");
+    const codeText = code?.textContent ?? "";
+    if (!codeText.trim()) {
+      continue;
+    }
     const lang = findLanguageLabel(container);
-    containers.set(container, { code: codeText, lang });
+    addContainer(container, codeText, lang);
   }
 
   return Array.from(containers.entries()).map(([element, data]) => ({
@@ -190,7 +225,7 @@ const extractTableRows = (table: Element): string[][] | null => {
   const parsed: string[][] = [];
   for (const row of rows) {
     const cells = Array.from(row.querySelectorAll("th, td")).map((cell) =>
-      stripUiLabels(cell.textContent ?? ""),
+      normalizeOutput(cell.textContent ?? ""),
     );
     if (cells.length === 0) {
       continue;
@@ -261,7 +296,7 @@ const serializeList = (list: Element) => {
   const items = Array.from(list.querySelectorAll("li"));
   return items
     .map((item, index) => {
-      const text = stripUiLabels(item.textContent ?? "");
+      const text = normalizeOutput(item.textContent ?? "");
       if (!text) {
         return null;
       }
@@ -307,14 +342,14 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
 
   for (const item of items) {
     if (item.type === "paragraph") {
-      const text = stripUiLabels(item.element.textContent ?? "");
+      const text = normalizeOutput(item.element.textContent ?? "");
       if (text) {
         markdownParts.push(text);
       }
     }
 
     if (item.type === "heading") {
-      const text = stripUiLabels(item.element.textContent ?? "");
+      const text = normalizeOutput(item.element.textContent ?? "");
       if (text) {
         markdownParts.push(`### ${text}`);
       }
@@ -340,7 +375,7 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
       if (table) {
         markdownParts.push(anchor, table, "<!-- /gemini-export:block -->");
       } else {
-        const fallback = stripUiLabels(item.element.textContent ?? "");
+        const fallback = normalizeOutput(item.element.textContent ?? "");
         if (fallback) {
           markdownParts.push(anchor, fallback, "<!-- /gemini-export:block -->");
         }
@@ -350,7 +385,8 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
   }
 
   const markdown = markdownParts.filter(Boolean).join("\n\n");
-  const text = stripUiLabels((block as HTMLElement).innerText ?? block.textContent ?? "");
+  const cleaned = cloneAndStripUi(block);
+  const text = normalizeOutput((cleaned as HTMLElement).innerText ?? cleaned.textContent ?? "");
   return { markdown, text };
 };
 
@@ -359,9 +395,9 @@ const serializeGeminiBlock = (block: Element, messageIndex: number) => {
  */
 const serializeUserBlock = (block: Element) => {
   const heading = block.querySelector('h2, [role="heading"][aria-level="2"]');
-  const mainText = heading ? stripUiLabels(heading.textContent ?? "") : "";
+  const mainText = heading ? normalizeOutput(heading.textContent ?? "") : "";
   const paragraphs = Array.from(block.querySelectorAll("p"))
-    .map((p) => stripUiLabels(p.textContent ?? ""))
+    .map((p) => normalizeOutput(p.textContent ?? ""))
     .filter((text) => text && text !== mainText);
 
   const parts = [mainText, ...paragraphs].filter(Boolean);
@@ -376,24 +412,19 @@ const clamp = (value: string, maxChars: number) =>
   value.length > maxChars ? value.slice(0, maxChars) : value;
 
 /**
- * Determines the role for the current block based on markers and history.
+ * Determines the role for the current block based on tag names and history.
  */
 const determineRole = (block: Element, previousRole: ExportRole | null): ExportRole | null => {
-  const hasUser = hasRoleMarkers(block, "user");
-  const hasGemini = hasRoleMarkers(block, "gemini");
-
-  if (hasUser && !hasGemini) {
+  const tagName = block.tagName.toLowerCase();
+  if (tagName === "user-query") {
     return "user";
   }
-
-  if (hasGemini && !hasUser) {
+  if (tagName === "model-response") {
     return "gemini";
   }
-
-  if (!hasUser && !hasGemini && previousRole === "user") {
+  if (previousRole === "user") {
     return "gemini";
   }
-
   return null;
 };
 

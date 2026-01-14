@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gemini Export Fixture</title>
+  </head>
+  <body>
+    <main>
+      <div id="chat-history" class="chat-history-scroll-container">
+        <user-query>
+          <div role="heading" aria-level="2">Demo prompt</div>
+          <time>12:34</time>
+        </user-query>
+        <model-response>
+          <p>Demo response paragraph.</p>
+          <ul>
+            <li>Alpha</li>
+            <li>Beta</li>
+          </ul>
+          <div class="code-block">
+            <span class="code-block-decoration">Markdown</span>
+            <pre><code># Demo
+
+console.log("hello");
+</code></pre>
+          </div>
+          <table>
+            <tr>
+              <th>Col</th>
+              <th>Val</th>
+            </tr>
+            <tr>
+              <td>A</td>
+              <td>1</td>
+            </tr>
+          </table>
+        </model-response>
+      </div>
+    </main>
+  </body>
+</html>

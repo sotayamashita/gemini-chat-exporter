@@ -4,14 +4,11 @@
 
 - This document is a practical guide to help the LLM self-correct when the Gemini Web UI DOM changes.
 - Scope is a single thread at `https://gemini.google.com/app/{chat_id}`. History lists and multi-chat pages are out of scope.
-- UI labels assume the Japanese UI (operationally, no multi-language support).
-- The account checked via Playwright MCP is set to Japanese display language.
-- The same structure was also confirmed in the English UI (2026-01-10). English labels: "Copy prompt" / "Show thinking" / "Good response" / "Bad response".
+- The extraction logic must be language-agnostic; UI labels vary by locale and are not used for role detection.
 
 ## Data to Collect
 
 - Required per-message fields: `role` / `markdown` / `text` / `timestamp` / `order`
-- UI markers used for role detection: visible labels for user and Gemini buttons
 - Message elements: headings, paragraphs, lists, code, tables
 - Code block metadata: language label and positioning relative to the copy UI
 - Chat-level metadata: source URL / generation timestamp
@@ -19,21 +16,15 @@
 ## Gemini Page Structure Characteristics
 
 - Common:
-  - The chat root tends to be near the ancestor of the heading "Conversation with Gemini / Gemini との会話".
-  - Multiple Gemini markers can exist within a single reply and may map to different ancestors.
+  - The chat history container is typically `#chat-history` or `infinite-scroller[data-test-id="chat-history-container"]`.
+  - User messages are wrapped in `<user-query>` elements.
+  - Gemini responses are wrapped in `<model-response>` elements.
+  - Multiple response/action controls can exist within a single reply; do not use button labels to infer role.
   - When both `.response-content` and `.response-container` exist for the same reply, prefer the inner `.response-content` to avoid duplication.
   - Code blocks have a language label within `.code-block`, and the label can be a sibling of `pre > code`.
-  - Class names are unstable; prefer text and aria-label.
-- Japanese UI:
-  - Heading: 「Gemini との会話」
-  - User: 「プロンプトをコピー」 button + heading with `aria-level="2"`
-  - Gemini replies: 「思考プロセスを表示」「良い回答」「悪い回答」
-  - Button labels may not appear as visible text, so prefer `aria-label`.
-- English UI:
-  - Heading: "Conversation with Gemini"
-  - User: "Copy prompt" button + heading with `aria-level="2"`
-  - Gemini replies: "Show thinking" / "Good response" / "Bad response"
-  - Button labels appear in `aria-label` or visible text, so prefer `aria-label`.
+  - Class names are unstable; prefer structural tags and data-test-id attributes.
+- Label notes:
+  - UI labels are localized (e.g., “Copy prompt” vs 「プロンプトをコピー」), so labels should only be used for optional UI cleanup, not for block discovery or role detection.
 - Observations (2026-01-10, Playwright MCP):
   - Candidate containers for Gemini reply body:
     - `.response-content` (className: `response-content ng-tns-c4226368718-11`)
@@ -115,7 +106,7 @@
 ## Mapping to Existing Implementation
 
 - chat root detection: `src/export/discovery.ts:147`
-  - Update here if the heading/root search changes.
+  - Update here if chat-history selectors change.
 - scroll container detection: `entrypoints/content.ts:17`
   - Update priority order when scroll container changes.
   - Always verify `scrollHeight > clientHeight` to confirm scrollability.
@@ -123,22 +114,21 @@
 - scroll loop behavior: `entrypoints/content.ts:56`
   - Uses a dynamic iteration cap (`computedMaxIterations`).
   - Requires `scrollHeight` stability after reaching `scrollTop = 0`.
-- marker detection: `src/export/discovery.ts:105` and `src/export/markers.ts:4`
-  - Update `markers.ts` when UI labels change.
-  - When supporting English UI, add English labels ("Copy prompt" / "Show thinking" / "Good response" / "Bad response").
-  - Adjust `buttonText()` if you want to change the priority of aria-label vs textContent.
+- message block discovery: `src/export/discovery.ts`
+  - Blocks are collected via `user-query` and `model-response` tags, with a fallback to `.conversation-container` when tags are missing.
 - message block collection: `src/export/discovery.ts:167`
   - If double extraction happens, ensure nested blocks are deduped and the most specific block is kept.
 - mixed block splitting: `src/export/discovery.ts:186`
   - Update when a single block mixes user/gemini after structural changes.
 - role detection: `src/export/extract.ts:399`
-  - Update when marker presence/order logic changes.
+  - Roles are inferred from tag names (`user-query` vs `model-response`).
 - Gemini serialization: `src/export/extract.ts:320`
   - Update when handling of paragraph/list/code/table changes.
 - User serialization: `src/export/extract.ts:378`
   - Update `heading` extraction rules if heading structure changes.
 - code block collection: `src/export/extract.ts:157`
-  - Code blocks are anchored by `.code-block` (preferred) or `pre` and must not depend on UI text.
+  - Code blocks are anchored by `.code-block` or the `code-block` custom element (preferred), with a `pre` fallback.
+  - Code content is taken from `code`, or `pre` when `code` is absent, and must not depend on UI text.
 - language label extraction: `src/export/extract.ts:135`
   - Update if language label position changes.
 - markdown generation: `src/export/serialize.ts:23`
@@ -147,30 +137,29 @@
 ## LLM Verification Procedure (Playwright MCP)
 
 - Navigate to the target chat: `https://gemini.google.com/app/{chat_id}`
-- Verify primary markers:
-  - `button` `aria-label` / text includes 「プロンプトをコピー」「思考プロセスを表示」「良い回答」「悪い回答」
-  - User heading can be `h2` or `role="heading"` + `aria-level="2"`
-- Check message block ancestor differences:
-  - Use `closest` from `button` to walk ancestors and confirm the minimal block differs between user/Gemini
+- Verify chat containers and message tags:
+  - `#chat-history` or `infinite-scroller[data-test-id="chat-history-container"]` exists
+  - `user-query` and `model-response` elements exist within the chat history container
 - Check code block structure:
-  - A language label exists under `.code-block`
+  - A language label exists under `.code-block` (or within `code-block` custom elements)
   - The label can be a sibling of `pre > code`
+  - `code-block` custom elements appear within `model-response`
 - Check for tables/lists:
   - `table`, `ul`, `ol` appear within message blocks
 
-### Playwright MCP Concrete Verification Queries (Japanese UI)
+### Playwright MCP Concrete Verification Queries
 
 ```ts
-// 1) Verify primary markers
+// 1) Verify chat history container and message tags
 await page.evaluate(() => {
-  const labelText = (b) => b.getAttribute("aria-label") || b.textContent || "";
-  const markers = ["プロンプトをコピー", "思考プロセスを表示", "良い回答", "悪い回答"];
-  return markers.map((label) => ({
-    label,
-    count: Array.from(document.querySelectorAll("button")).filter((b) =>
-      labelText(b).includes(label),
-    ).length,
-  }));
+  const history =
+    document.querySelector("#chat-history") ||
+    document.querySelector('infinite-scroller[data-test-id="chat-history-container"]');
+  return {
+    hasHistory: Boolean(history),
+    userQueries: document.querySelectorAll("user-query").length,
+    modelResponses: document.querySelectorAll("model-response").length,
+  };
 });
 ```
 
@@ -184,29 +173,12 @@ await page.evaluate(() => {
 ```
 
 ```ts
-// 3) Gemini marker ancestor differences (check for duplicate extraction)
+// 3) Response content candidates
 await page.evaluate(() => {
-  const normalize = (v) => (v || "").replace(/\\s+/g, " ").trim();
-  const buttons = Array.from(document.querySelectorAll("button")).filter(
-    (b) =>
-      normalize(b.textContent).includes("思考プロセスを表示") ||
-      normalize(b.textContent).includes("良い回答") ||
-      normalize(b.textContent).includes("悪い回答"),
-  );
-  return buttons.slice(0, 6).map((b) => {
-    let current = b.parentElement;
-    const chain = [];
-    let depth = 0;
-    while (current && depth < 6) {
-      chain.push({
-        tag: current.tagName,
-        className: current.className || null,
-      });
-      current = current.parentElement;
-      depth += 1;
-    }
-    return { label: normalize(b.textContent), chain };
-  });
+  return {
+    responseContainers: document.querySelectorAll(".response-container").length,
+    responseContents: document.querySelectorAll(".response-content").length,
+  };
 });
 ```
 
@@ -215,7 +187,7 @@ await page.evaluate(() => {
 await page.evaluate(() => {
   const code = document.querySelector("pre code");
   if (!code) return null;
-  const block = code.closest(".code-block");
+  const block = code.closest(".code-block") ?? code.closest("code-block");
   const label = block?.querySelector(".code-block-decoration");
   return {
     hasCodeBlock: Boolean(block),
@@ -228,95 +200,10 @@ await page.evaluate(() => {
 ```ts
 // 5) Quick count of message block candidates
 await page.evaluate(() => {
-  const isMarker = (b) => {
-    const t = (b.getAttribute("aria-label") || b.textContent || "").replace(/\\s+/g, " ").trim();
-    return ["プロンプトをコピー", "思考プロセスを表示", "良い回答", "悪い回答"].some((m) =>
-      t.includes(m),
-    );
-  };
-  const buttons = Array.from(document.querySelectorAll("button")).filter(isMarker);
-  return { markerButtonCount: buttons.length };
-});
-```
-
-### Playwright MCP Concrete Verification Queries (English UI)
-
-```ts
-// 1) Verify primary markers
-await page.evaluate(() => {
-  const labelText = (b) => b.getAttribute("aria-label") || b.textContent || "";
-  const markers = ["Copy prompt", "Show thinking", "Good response", "Bad response"];
-  return markers.map((label) => ({
-    label,
-    count: Array.from(document.querySelectorAll("button")).filter((b) =>
-      labelText(b).includes(label),
-    ).length,
-  }));
-});
-```
-
-```ts
-// 2) Detect user headings (both h2 and aria-level=2)
-await page.evaluate(() => {
-  const h2 = document.querySelectorAll("h2").length;
-  const aria = document.querySelectorAll('[role="heading"][aria-level="2"]').length;
-  return { h2, aria };
-});
-```
-
-```ts
-// 3) Gemini marker ancestor differences (check for duplicate extraction)
-await page.evaluate(() => {
-  const normalize = (v) => (v || "").replace(/\\s+/g, " ").trim();
-  const buttons = Array.from(document.querySelectorAll("button")).filter(
-    (b) =>
-      normalize(b.getAttribute("aria-label") || b.textContent).includes("Show thinking") ||
-      normalize(b.getAttribute("aria-label") || b.textContent).includes("Good response") ||
-      normalize(b.getAttribute("aria-label") || b.textContent).includes("Bad response"),
-  );
-  return buttons.slice(0, 6).map((b) => {
-    let current = b.parentElement;
-    const chain = [];
-    let depth = 0;
-    while (current && depth < 6) {
-      chain.push({
-        tag: current.tagName,
-        className: current.className || null,
-      });
-      current = current.parentElement;
-      depth += 1;
-    }
-    return { label: normalize(b.getAttribute("aria-label") || b.textContent), chain };
-  });
-});
-```
-
-```ts
-// 4) Confirm code block language label position
-await page.evaluate(() => {
-  const code = document.querySelector("pre code");
-  if (!code) return null;
-  const block = code.closest(".code-block");
-  const label = block?.querySelector(".code-block-decoration");
   return {
-    hasCodeBlock: Boolean(block),
-    labelText: label ? label.textContent?.trim() : null,
-    preTextSample: code.textContent?.slice(0, 80) ?? null,
+    userQueries: document.querySelectorAll("user-query").length,
+    modelResponses: document.querySelectorAll("model-response").length,
   };
-});
-```
-
-```ts
-// 5) Quick count of message block candidates
-await page.evaluate(() => {
-  const isMarker = (b) => {
-    const t = (b.getAttribute("aria-label") || b.textContent || "").replace(/\\s+/g, " ").trim();
-    return ["Copy prompt", "Show thinking", "Good response", "Bad response"].some((m) =>
-      t.includes(m),
-    );
-  };
-  const buttons = Array.from(document.querySelectorAll("button")).filter(isMarker);
-  return { markerButtonCount: buttons.length };
 });
 ```
 
@@ -331,12 +218,10 @@ await page.evaluate(() => {
   - `https://gemini.google.com/app/cbb342fdc6010a5e` (long chat: requires scrolling)
 - Observation points (mapped to this document):
   - The class-name observations under "Gemini Page Structure Characteristics" are still present
-  - Marker labels exist (「プロンプトをコピー」「思考プロセスを表示」「良い回答」「悪い回答」)
   - `response-content` / `response-container` exist together
   - `.code-block-decoration` displays a language label
   - User headings can be captured via `h2` or `role="heading"` + `aria-level="2"`
   - The relationship between `.code-block-decoration` and `pre > code` is preserved
-  - Marker labels are retrievable via `aria-label`
   - After forcing `scrollTop = 0`, `scrollHeight` should remain stable for multiple checks
 - Procedure:
   - Run the "Playwright MCP Concrete Verification Queries" in this file
@@ -351,11 +236,10 @@ await page.evaluate(() => {
   - Code block language is empty
   - Previously extracted elements (tables/lists) disappear
 - Initial investigation:
-  - Re-check primary markers, headings, and code block structure with Playwright MCP
-  - Compare ancestor chains for the blocks referenced by markers
+  - Re-check chat containers, message tags, and code block structure with Playwright MCP
 - Update priority:
-  1. UI label updates in `markers.ts`
-  2. Block detection in `findMessageBlocks()` and `splitMixedBlock()`
+  1. Block detection in `findMessageBlocks()` and `splitMixedBlock()`
+  2. Role detection in `determineRole()` based on tag names
   3. Language detection in `collectCodeBlocks()` and `findLanguageLabel()`
   4. Extraction elements in `serializeGeminiBlock()` / `serializeUserBlock()`
 - Post-update verification:
@@ -364,11 +248,10 @@ await page.evaluate(() => {
 
 ## Known Pitfalls and Mitigations
 
-- Double extraction: Gemini markers are split across `.response-content` and `.response-container`.
+- Double extraction: response content can exist in both `.response-content` and `.response-container`.
 - Language missing: Language labels are siblings of `pre`, so searching only inside `pre` misses them.
 - Missing headings: Some cases use `role="heading"` + `aria-level="2"` instead of `h2`.
 - UI label contamination: Remove UI button labels from extracted text.
-- Marker fragility: UI label changes can break role detection.
-- Regenerate replies: UI like 「やり直す」 can change marker ancestor relationships.
+- Regenerate replies: UI actions like “Redo” can change action button hierarchy within responses.
 - Large tables: Wide tables can cause parsing failures (fallback with column limits).
 - Inline code misclassification: Short inline `code` should not be treated as a block unless inside `pre`/`.code-block`.

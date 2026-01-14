@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gemini Code Block Fixture (EN)</title>
+  </head>
+  <body>
+    <main>
+      <div id="chat-history" class="chat-history-scroll-container">
+        <user-query>
+          <div role="heading" aria-level="2">Show me a code sample</div>
+          <time>09:01</time>
+        </user-query>
+        <model-response>
+          <div class="response-container">
+            <div class="response-content">
+              <structured-content-container class="model-response-text">
+                <div class="container">
+                  <message-content>
+                    <div class="markdown markdown-main-panel">
+                      <p>Here is a markdown example.</p>
+                      <response-element>
+                        <code-block class="ng-star-inserted">
+                          <div class="code-block">
+                            <div class="code-block-decoration">
+                              <span>Markdown</span>
+                            </div>
+                            <div class="formatted-code-block-internal-container">
+                              <pre><code data-test-id="code-content"># Example
+
+console.log("ok");
+</code></pre>
+                            </div>
+                          </div>
+                        </code-block>
+                      </response-element>
+                    </div>
+                  </message-content>
+                </div>
+              </structured-content-container>
+            </div>
+          </div>
+        </model-response>
+      </div>
+    </main>
+  </body>
+</html>
